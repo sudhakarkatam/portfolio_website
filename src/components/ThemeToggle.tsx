@@ -29,12 +29,12 @@ export const ThemeToggle = () => {
       variant="ghost"
       size="icon"
       onClick={toggleTheme}
-      className="hover:bg-sidebar-accent transition-all duration-300"
+      className="hover:bg-sidebar-accent transition-all duration-300 h-8 w-8 md:h-10 md:w-10 touch-manipulation"
     >
       {isDark ? (
-        <Sun className="h-5 w-5 text-yellow-500" />
+        <Sun className="h-4 w-4 md:h-5 md:w-5 text-yellow-500" />
       ) : (
-        <Moon className="h-5 w-5 text-blue-400" />
+        <Moon className="h-4 w-4 md:h-5 md:w-5 text-blue-400" />
       )}
     </Button>
   );

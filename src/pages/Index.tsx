@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Send, RotateCcw } from 'lucide-react';
+import { Send, RotateCcw, Menu, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CollapsibleSidebar } from '@/components/CollapsibleSidebar';
@@ -18,6 +18,7 @@ const Index = () => {
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isChatExpanded, setIsChatExpanded] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -91,24 +92,58 @@ const Index = () => {
   };
 
   const handleClearChat = () => {
-    const welcomeMessage: Message = {
-      id: '0',
-      role: 'assistant',
-      content: `Chat cleared! Hi again! I'm ${portfolioData.name}'s portfolio assistant. What would you like to know?`,
-      timestamp: new Date(),
-    };
-    setMessages([welcomeMessage]);
+    setMessages([]);
+    setIsChatExpanded(false);
+    setInputValue('');
     toast.success('Chat cleared successfully');
+  };
+
+  const handleGoHome = () => {
+    setMessages([]);
+    setIsChatExpanded(false);
+    setInputValue('');
+    setIsMobileSidebarOpen(false);
   };
 
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background">
-      <CollapsibleSidebar onNavigate={handleNavigate} />
+      {/* Desktop Sidebar - Hidden on mobile */}
+      <div className="hidden md:block">
+        <CollapsibleSidebar onNavigate={handleNavigate} onGoHome={handleGoHome} isMobile={false} />
+      </div>
 
       {/* Theme Toggle - Top Right Corner */}
-      <div className="fixed top-4 right-4 z-50">
+      <div className="fixed top-2 right-2 md:top-4 md:right-4 z-50">
         <ThemeToggle />
+      </div>
+
+      {/* Mobile Sidebar Toggle */}
+      <div className="fixed top-2 left-2 md:hidden z-50">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+          className="bg-sidebar/80 backdrop-blur-sm hover:bg-sidebar-accent h-8 w-8 touch-manipulation"
+        >
+          <Menu className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* Mobile Sidebar Overlay */}
+      {isMobileSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40"
+          onClick={() => setIsMobileSidebarOpen(false)}
+        />
+      )}
+
+      {/* Mobile Sidebar Drawer */}
+      <div className={`
+        ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        fixed z-50 transition-transform duration-300 h-full w-72 bg-sidebar border-r border-border shadow-xl
+      `}>
+        <CollapsibleSidebar onNavigate={handleNavigate} onMobileClose={() => setIsMobileSidebarOpen(false)} onGoHome={handleGoHome} isMobile={true} />
       </div>
 
       <main className="flex-1 relative">
@@ -116,9 +151,9 @@ const Index = () => {
         {isChatExpanded && (
           <div
             ref={chatContainerRef}
-            className="absolute top-0 left-0 right-0 bottom-24 overflow-y-auto px-4 md:px-6 py-6"
+            className="absolute top-0 left-0 right-0 bottom-20 overflow-y-auto px-3 md:px-4 lg:px-6 py-4 md:py-6"
           >
-            <div className="max-w-5xl mx-auto w-full">
+            <div className="max-w-5xl mx-auto w-full space-y-3 md:space-y-4">
               {messages.map((message) => (
                 <ChatMessage key={message.id} message={message} />
               ))}
@@ -128,32 +163,32 @@ const Index = () => {
           </div>
         )}
 
-        {/* Centered Input Area - Initial State */}
+        {/* Welcome Content Area */}
         {!isChatExpanded && (
-          <div className="absolute inset-0 flex items-center justify-center p-6">
+          <div className="absolute top-0 left-0 right-0 bottom-0 flex items-center justify-center p-3 md:p-6 overflow-y-auto">
             <motion.div
               initial={{ y: 50, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              className="text-center space-y-8 w-full max-w-2xl"
+              className="text-center space-y-4 md:space-y-6 lg:space-y-8 w-full max-w-2xl px-2"
             >
               {/* Keep Smiling Text */}
-              <div className="space-y-4">
+              <div className="space-y-2 md:space-y-3 lg:space-y-4">
                 <motion.h1
                   initial={{ scale: 0.5, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ delay: 0.2 }}
-                  className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-accent to-accent/60 bg-clip-text text-transparent"
+                  className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold bg-gradient-to-r from-accent to-accent/60 bg-clip-text text-transparent leading-tight"
                 >
-                  Keep Smiling <span className="text-4xl md:text-6xl"></span>
+                  Keep Smiling <span className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl"></span>
                 </motion.h1>
                 <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.4 }}
-                  className="text-lg text-muted-foreground"
-                >
-                  We are what we repeatedly do
-                </motion.p>
+                   initial={{ opacity: 0 }}
+                   animate={{ opacity: 1 }}
+                   transition={{ delay: 0.4 }}
+                   className="text-sm md:text-base lg:text-lg text-muted-foreground px-2"
+                 >
+                   We are what we repeatedly do
+                 </motion.p>
               </div>
 
               {/* Suggestion Chips */}
@@ -161,75 +196,110 @@ const Index = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.6 }}
-                className="flex flex-wrap gap-2 justify-center"
+                className="flex flex-wrap gap-1 md:gap-2 justify-center px-1"
               >
                 <SuggestionChips onSelect={handleSuggestionClick} />
               </motion.div>
 
-              {/* Centered Input Area */}
+              {/* Input Box - Positioned right below suggestions (Desktop Only) */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.8 }}
-                className="w-full max-w-xl mx-auto"
+                className="hidden md:flex justify-center pt-2"
               >
-                <div className="flex gap-2 bg-sidebar/80 backdrop-blur-sm border border-border rounded-lg p-4 shadow-lg">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleClearChat}
-                    title="Clear chat"
-                    className="hover:bg-secondary shrink-0"
-                  >
-                    <RotateCcw className="h-4 w-4" />
-                  </Button>
-                  <Input
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-                    placeholder="Ask about my skills, projects, or experience..."
-                    className="flex-1 bg-input border-border focus:ring-accent"
-                  />
-                  <Button
-                    onClick={() => handleSendMessage()}
-                    disabled={!inputValue.trim() || isTyping}
-                    className="bg-accent hover:bg-accent/90 shrink-0"
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
+                <div className="w-full max-w-xl mx-auto px-1">
+                  <div className="flex gap-1 md:gap-2 p-2 bg-sidebar/50 backdrop-blur-sm border border-border/50 rounded-lg shadow-lg">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleClearChat}
+                      title="Clear chat"
+                      className="hover:bg-secondary shrink-0 h-8 w-8 md:h-9 md:w-9 lg:h-10 lg:w-10 touch-manipulation"
+                    >
+                      <RotateCcw className="h-3 w-3 md:h-4 md:w-4" />
+                    </Button>
+                    <Input
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+                      placeholder="Ask about my skills, projects, or experience..."
+                      className="flex-1 bg-input border-0 focus:ring-0 text-sm md:text-base h-8 md:h-9 lg:h-10 min-h-[44px] touch-manipulation"
+                    />
+                    <Button
+                      onClick={() => handleSendMessage()}
+                      disabled={!inputValue.trim() || isTyping}
+                      className="bg-accent hover:bg-accent/90 shrink-0 h-8 w-8 md:h-9 md:w-9 lg:h-10 lg:w-10 touch-manipulation"
+                    >
+                      <Send className="h-3 w-3 md:h-4 md:w-4" />
+                    </Button>
+                  </div>
                 </div>
               </motion.div>
             </motion.div>
           </div>
         )}
 
-        {/* Bottom Input Area - After Expansion */}
+        {/* Bottom Input Area - Visible when chat is expanded */}
         {isChatExpanded && (
-          <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6 bg-sidebar/95 backdrop-blur-sm border-t border-border z-10">
-            <div className="max-w-5xl mx-auto">
-              <div className="flex gap-2">
+          <div className="absolute bottom-0 left-0 right-0 p-3 md:p-4 lg:p-6 bg-sidebar/95 backdrop-blur-sm border-t border-border z-10">
+            <div className="max-w-5xl mx-auto px-1">
+              <div className="flex gap-1 md:gap-2">
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={handleClearChat}
                   title="Clear chat"
-                  className="hover:bg-secondary shrink-0"
+                  className="hover:bg-secondary shrink-0 h-8 w-8 md:h-9 md:w-9 lg:h-10 lg:w-10 touch-manipulation"
                 >
-                  <RotateCcw className="h-4 w-4" />
+                  <RotateCcw className="h-3 w-3 md:h-4 md:w-4" />
                 </Button>
                 <Input
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
                   placeholder="Ask about my skills, projects, or experience..."
-                  className="flex-1 bg-input border-border focus:ring-accent"
+                  className="flex-1 bg-input border-border focus:ring-accent text-sm md:text-base h-8 md:h-9 lg:h-10 min-h-[44px] touch-manipulation"
                 />
                 <Button
                   onClick={() => handleSendMessage()}
                   disabled={!inputValue.trim() || isTyping}
-                  className="bg-accent hover:bg-accent/90 shrink-0"
+                  className="bg-accent hover:bg-accent/90 shrink-0 h-8 w-8 md:h-9 md:w-9 lg:h-10 lg:w-10 touch-manipulation"
                 >
-                  <Send className="h-4 w-4" />
+                  <Send className="h-3 w-3 md:h-4 md:w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Mobile Bottom Input - Only for mobile when chat is collapsed */}
+        {!isChatExpanded && (
+          <div className="block md:hidden absolute bottom-0 left-0 right-0 p-3 md:p-4 lg:p-6 bg-sidebar/95 backdrop-blur-sm border-t border-border z-10">
+            <div className="max-w-5xl mx-auto px-1">
+              <div className="flex gap-1 md:gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleClearChat}
+                  title="Clear chat"
+                  className="hover:bg-secondary shrink-0 h-8 w-8 md:h-9 md:w-9 lg:h-10 lg:w-10 touch-manipulation"
+                >
+                  <RotateCcw className="h-3 w-3 md:h-4 md:w-4" />
+                </Button>
+                <Input
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+                  placeholder="Ask about my skills, projects, or experience..."
+                  className="flex-1 bg-input border-border focus:ring-accent text-sm md:text-base h-8 md:h-9 lg:h-10 min-h-[44px] touch-manipulation"
+                />
+                <Button
+                  onClick={() => handleSendMessage()}
+                  disabled={!inputValue.trim() || isTyping}
+                  className="bg-accent hover:bg-accent/90 shrink-0 h-8 w-8 md:h-9 md:w-9 lg:h-10 lg:w-10 touch-manipulation"
+                >
+                  <Send className="h-3 w-3 md:h-4 md:w-4" />
                 </Button>
               </div>
             </div>

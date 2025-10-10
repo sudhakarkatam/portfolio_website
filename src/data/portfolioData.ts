@@ -398,7 +398,7 @@ export const portfolioData: PortfolioData = {
         'Database optimization for product catalogs',
         'Performance optimization techniques'
       ]
-    }
+    },
   ],
   
   experience: [
