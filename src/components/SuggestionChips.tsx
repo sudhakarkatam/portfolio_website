@@ -15,7 +15,7 @@ export const SuggestionChips = ({ onSelect }: SuggestionChipsProps) => {
   ];
 
   return (
-    <div className="flex flex-wrap gap-2 mb-4">
+    <div className="flex flex-wrap gap-2 justify-center">
       {suggestions.map((suggestion, index) => (
         <motion.div
           key={suggestion.id}
@@ -25,10 +25,11 @@ export const SuggestionChips = ({ onSelect }: SuggestionChipsProps) => {
         >
           <Button
             variant="outline"
-            className="bg-card hover:bg-sidebar-accent border-border transition-all duration-300"
+            size="sm"
+            className="bg-sidebar/50 hover:bg-sidebar-accent border-border/50 backdrop-blur-sm transition-all duration-300 text-xs"
             onClick={() => onSelect(suggestion.query)}
           >
-            <suggestion.icon className="mr-2 h-4 w-4" />
+            <suggestion.icon className="mr-2 h-3 w-3" />
             {suggestion.label}
           </Button>
         </motion.div>

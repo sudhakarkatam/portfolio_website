@@ -1,13 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Send, Download, Sparkles, RotateCcw } from 'lucide-react';
+import { Send, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CollapsibleSidebar } from '@/components/CollapsibleSidebar';
 import { ChatMessage } from '@/components/ChatMessage';
 import { TypingIndicator } from '@/components/TypingIndicator';
 import { SuggestionChips } from '@/components/SuggestionChips';
-import { MobileHeader } from '@/components/MobileHeader';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { Message } from '@/types/portfolio';
 import { generateResponse } from '@/utils/chatResponses';
 import { portfolioData } from '@/data/portfolioData';
@@ -17,6 +17,7 @@ const Index = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [isChatExpanded, setIsChatExpanded] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -28,20 +29,19 @@ const Index = () => {
     scrollToBottom();
   }, [messages, isTyping]);
 
-  useEffect(() => {
-    // Welcome message
-    const welcomeMessage: Message = {
-      id: '0',
-      role: 'assistant',
-      content: `🤖 *Hi! I'm ${portfolioData.name}'s AI Portfolio Assistant!*\n\nI'm here to help you explore:\n\n┌─ 🚀 **Projects** - 3 real applications\n│  • Personal Tracker, Finance Calculator\n│  • Product discovery platform\n└─ Click "Projects" in sidebar\n\n┌─ 🎓 **Education** - Academic journey\n│  • B.Tech Computer Science\n│  • Salesforce & AWS certifications from Aicte\n└─ Click "Experience" in sidebar\n\n┌─ 🛠️ **Skills** - Technical expertise\n│  • Full-stack development\n│  • Ask For Skills in chat \n└─ Click "Skills" in sidebar\n\n💡 *Try: "Tell me about your projects" or "Show me your experience"*`,
-      timestamp: new Date(),
-    };
-    setMessages([welcomeMessage]);
-  }, []);
+ useEffect(() => {
+   // No welcome message needed - start with empty chat
+   setMessages([]);
+ }, []);
 
   const handleSendMessage = async (text?: string, projectId?: string) => {
     const messageText = text || inputValue.trim();
     if (!messageText && !projectId) return;
+
+    // Expand chat on first user interaction
+    if (messages.length <= 1) {
+      setIsChatExpanded(true);
+    }
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -101,92 +101,140 @@ const Index = () => {
     toast.success('Chat cleared successfully');
   };
 
-  const handleDownloadResume = () => {
-    window.open('https://drive.google.com/file/d/1ts6WNTgkD4t6cEjkLE7dRmGEU8NvxCYf/view?usp=drive_link', '_blank');
-  };
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background">
-      <MobileHeader onNavigate={handleNavigate} />
       <CollapsibleSidebar onNavigate={handleNavigate} />
 
-      <main className="flex-1 flex flex-col pt-14 md:pt-0">
-        {/* Header */}
-        <motion.header
-          initial={{ y: -50, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className="hidden md:flex border-b border-border px-6 py-4 items-center justify-between bg-sidebar"
-        >
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Sparkles className="h-6 w-6 text-accent animate-pulse-glow" />
-              {portfolioData.name}
-            </h1>
-            <p className="text-sm text-muted-foreground">{portfolioData.title}</p>
-          </div>
-          <Button
-            onClick={handleDownloadResume}
-            className="bg-accent hover:bg-accent/90"
+      {/* Theme Toggle - Top Right Corner */}
+      <div className="fixed top-4 right-4 z-50">
+        <ThemeToggle />
+      </div>
+
+      <main className="flex-1 relative">
+        {/* Chat Messages Area - Scrollable above input when expanded */}
+        {isChatExpanded && (
+          <div
+            ref={chatContainerRef}
+            className="absolute top-0 left-0 right-0 bottom-24 overflow-y-auto px-4 md:px-6 py-6"
           >
-            <Download className="mr-2 h-4 w-4" />
-            View Resume
-          </Button>
-        </motion.header>
-
-        {/* Chat Area */}
-        <div
-          ref={chatContainerRef}
-          className="flex-1 overflow-y-auto px-4 md:px-6 py-6 space-y-4"
-        >
-          <div className="max-w-5xl mx-auto">
-            {messages.map((message) => (
-              <ChatMessage key={message.id} message={message} />
-            ))}
-            {isTyping && <TypingIndicator />}
-            <div ref={messagesEndRef} />
-          </div>
-        </div>
-
-        {/* Input Area */}
-        <motion.div
-          initial={{ y: 50, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className="border-t border-border p-4 md:p-6 bg-sidebar"
-        >
-          <div className="max-w-5xl mx-auto space-y-4">
-            {messages.length <= 1 && <SuggestionChips onSelect={handleSuggestionClick} />}
-            
-            <div className="flex gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleClearChat}
-                title="Clear chat"
-                className="hover:bg-secondary"
-              >
-                <RotateCcw className="h-4 w-4" />
-              </Button>
-              <Input
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-                placeholder="Ask about my skills, projects, or experience..."
-                className="flex-1 bg-input border-border focus:ring-accent"
-              />
-              <Button
-                onClick={() => handleSendMessage()}
-                disabled={!inputValue.trim() || isTyping}
-                className="bg-accent hover:bg-accent/90"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
+            <div className="max-w-5xl mx-auto w-full">
+              {messages.map((message) => (
+                <ChatMessage key={message.id} message={message} />
+              ))}
+              {isTyping && <TypingIndicator />}
+              <div ref={messagesEndRef} />
             </div>
-
-            <p className="text-xs text-center text-muted-foreground">
-              Built with React, Tailwind & Framer Motion | Click sidebar items for quick navigation
-            </p>
           </div>
-        </motion.div>
+        )}
+
+        {/* Centered Input Area - Initial State */}
+        {!isChatExpanded && (
+          <div className="absolute inset-0 flex items-center justify-center p-6">
+            <motion.div
+              initial={{ y: 50, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              className="text-center space-y-8 w-full max-w-2xl"
+            >
+              {/* Keep Smiling Text */}
+              <div className="space-y-4">
+                <motion.h1
+                  initial={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                  className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-accent to-accent/60 bg-clip-text text-transparent"
+                >
+                  Keep Smiling <span className="text-4xl md:text-6xl"></span>
+                </motion.h1>
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                  className="text-lg text-muted-foreground"
+                >
+                  We are what we repeatedly do
+                </motion.p>
+              </div>
+
+              {/* Suggestion Chips */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 }}
+                className="flex flex-wrap gap-2 justify-center"
+              >
+                <SuggestionChips onSelect={handleSuggestionClick} />
+              </motion.div>
+
+              {/* Centered Input Area */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.8 }}
+                className="w-full max-w-xl mx-auto"
+              >
+                <div className="flex gap-2 bg-sidebar/80 backdrop-blur-sm border border-border rounded-lg p-4 shadow-lg">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleClearChat}
+                    title="Clear chat"
+                    className="hover:bg-secondary shrink-0"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                  </Button>
+                  <Input
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+                    placeholder="Ask about my skills, projects, or experience..."
+                    className="flex-1 bg-input border-border focus:ring-accent"
+                  />
+                  <Button
+                    onClick={() => handleSendMessage()}
+                    disabled={!inputValue.trim() || isTyping}
+                    className="bg-accent hover:bg-accent/90 shrink-0"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+              </motion.div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Bottom Input Area - After Expansion */}
+        {isChatExpanded && (
+          <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6 bg-sidebar/95 backdrop-blur-sm border-t border-border z-10">
+            <div className="max-w-5xl mx-auto">
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleClearChat}
+                  title="Clear chat"
+                  className="hover:bg-secondary shrink-0"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </Button>
+                <Input
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+                  placeholder="Ask about my skills, projects, or experience..."
+                  className="flex-1 bg-input border-border focus:ring-accent"
+                />
+                <Button
+                  onClick={() => handleSendMessage()}
+                  disabled={!inputValue.trim() || isTyping}
+                  className="bg-accent hover:bg-accent/90 shrink-0"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
