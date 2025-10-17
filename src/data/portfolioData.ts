@@ -464,4 +464,34 @@ export const portfolioData: PortfolioData = {
     linkedin: 'https://www.linkedin.com/in/sudhakar-katam',
     twitter: 'https://x.com/sudhakarkatam2',
   },
+
+  availability: {
+    available: true,
+    statusText: "Available for work",
+    lastUpdated: new Date()
+  },
+
+  personalTraits: {
+    strengths: [
+      "Quick learner with strong problem-solving abilities",
+      "Excellent communication and teamwork skills",
+      "Detail-oriented with focus on code quality",
+      "Adaptable to new technologies and frameworks",
+      "Strong analytical thinking and debugging skills"
+    ],
+    weaknesses: [
+      "Sometimes spend too much time perfecting details",
+      "Learning to say no to additional tasks when overloaded",
+      "Working on improving time estimation for projects",
+      "Building confidence in public speaking and presentations"
+    ],
+    hobbies: [
+      "Coding side projects and exploring new technologies",
+      "Reading tech blogs and staying updated with industry trends",
+      "Playing strategy games and puzzle solving",
+      "Learning about AI and machine learning concepts",
+      "Contributing to open source projects",
+      "Photography and capturing moments"
+    ]
+  }
 };
