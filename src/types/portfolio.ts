@@ -66,6 +66,26 @@ export interface Experience {
   certificateUrl?: string;
 }
 
+export interface AvailabilityStatus {
+  available: boolean;
+  statusText: string;
+  lastUpdated: Date;
+}
+
+export interface Game {
+  id: string;
+  title: string;
+  description: string;
+  category: 'entertainment' | 'educational';
+  icon: string;
+}
+
+export interface PersonalTraits {
+  strengths: string[];
+  weaknesses: string[];
+  hobbies: string[];
+}
+
 export interface PortfolioData {
   name: string;
   title: string;
@@ -79,4 +99,6 @@ export interface PortfolioData {
     linkedin?: string;
     twitter?: string;
   };
+  availability?: AvailabilityStatus;
+  personalTraits?: PersonalTraits;
 }

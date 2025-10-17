@@ -15,7 +15,7 @@ export const SuggestionChips = ({ onSelect }: SuggestionChipsProps) => {
   ];
 
   return (
-    <div className="flex flex-wrap gap-1 md:gap-2 justify-center">
+    <div className="flex flex-wrap gap-2 md:gap-3 justify-center">
       {suggestions.map((suggestion, index) => (
         <motion.div
           key={suggestion.id}
@@ -26,11 +26,11 @@ export const SuggestionChips = ({ onSelect }: SuggestionChipsProps) => {
           <Button
             variant="outline"
             size="sm"
-            className="bg-sidebar/50 hover:bg-sidebar-accent border-border/50 backdrop-blur-sm transition-all duration-300 text-xs h-7 md:h-8 px-2 md:px-3 touch-manipulation"
+            className="bg-sidebar/50 hover:bg-sidebar-accent border-border/50 backdrop-blur-sm transition-all duration-300 text-sm h-8 md:h-9 px-3 md:px-4 touch-manipulation"
             onClick={() => onSelect(suggestion.query)}
           >
-            <suggestion.icon className="mr-1 md:mr-2 h-3 w-3" />
-            <span className="text-xs">{suggestion.label}</span>
+            <suggestion.icon className="mr-1 md:mr-2 h-4 w-4" />
+            <span className="text-sm">{suggestion.label}</span>
           </Button>
         </motion.div>
       ))}

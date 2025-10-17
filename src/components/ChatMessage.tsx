@@ -35,7 +35,7 @@ export const ChatMessage = ({ message, isLast }: ChatMessageProps) => {
                 : 'chat-bubble-assistant'
             } shadow-md relative`}
           >
-            <div className="text-sm md:text-base whitespace-pre-wrap break-words">
+            <div className="text-base md:text-lg whitespace-pre-wrap break-words leading-relaxed">
               {message.content.split('\n').map((line, index) => {
                 // Handle project boxes with borders
                 if (line.startsWith('┌─') || line.startsWith('│') || line.startsWith('└─')) {
@@ -81,7 +81,7 @@ export const ChatMessage = ({ message, isLast }: ChatMessageProps) => {
           </div>
         )}
         
-        <span className="text-xs text-muted-foreground mt-1 px-2">
+        <span className="text-xs md:text-sm text-muted-foreground mt-1 px-2">
           {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </span>
       </div>

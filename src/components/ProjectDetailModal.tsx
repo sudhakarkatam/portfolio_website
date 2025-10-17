@@ -10,9 +10,10 @@ interface ProjectDetailModalProps {
   project: ProjectDetail | null;
   isOpen: boolean;
   onClose: () => void;
+  onNavigate?: (section: string, projectId?: string) => void;
 }
 
-export const ProjectDetailModal = ({ project, isOpen, onClose }: ProjectDetailModalProps) => {
+export const ProjectDetailModal = ({ project, isOpen, onClose, onNavigate }: ProjectDetailModalProps) => {
   if (!project) return null;
 
   const projectDetail = project as ProjectDetail;
@@ -38,18 +39,18 @@ export const ProjectDetailModal = ({ project, isOpen, onClose }: ProjectDetailMo
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex items-start justify-between">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-background border-border w-[95vw] h-[95vh] md:w-auto md:h-auto md:max-w-4xl md:max-h-[90vh] [&>button]:opacity-100 [&>button]:bg-background/80 [&>button]:backdrop-blur-sm [&>button]:border [&>button]:border-border [&>button]:shadow-lg [&>button]:h-10 [&>button]:w-10 [&>button]:right-2 [&>button]:top-2 [&>button>svg]:h-5 [&>button>svg]:w-5 [&>button>svg]:text-foreground">
+        <DialogHeader className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div className="flex-1">
-              <DialogTitle className="text-2xl font-bold text-gray-900 mb-2">
+              <DialogTitle className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground mb-3">
                 {projectDetail.title}
               </DialogTitle>
-              <DialogDescription className="text-lg text-gray-600">
+              <DialogDescription className="text-base sm:text-lg md:text-xl text-muted-foreground leading-relaxed">
                 {projectDetail.description}
               </DialogDescription>
             </div>
-            <div className="flex gap-2 ml-4">
+            <div className="flex flex-wrap gap-2 sm:ml-4">
               {projectDetail.status && (
                 <Badge className={getStatusColor(projectDetail.status)}>
                   {projectDetail.status}
@@ -64,10 +65,10 @@ export const ProjectDetailModal = ({ project, isOpen, onClose }: ProjectDetailMo
           </div>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Project Image */}
           {projectDetail.image && (
-            <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-blue-50 to-indigo-100 h-64 flex items-center justify-center">
+            <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-secondary/20 to-secondary/40 h-48 sm:h-64 flex items-center justify-center">
               <img
                 src={projectDetail.image}
                 alt={projectDetail.title}
@@ -77,29 +78,34 @@ export const ProjectDetailModal = ({ project, isOpen, onClose }: ProjectDetailMo
           )}
 
           {/* Quick Actions */}
-          <div className="flex gap-3">
-            {projectDetail.demoUrl && (
-              <Button asChild className="flex-1">
-                <a href={projectDetail.demoUrl} target="_blank" rel="noopener noreferrer">
-                  <Play className="w-4 h-4 mr-2" />
-                  View Live Demo
-                </a>
+          <div className="flex flex-col gap-3">
+            {projectDetail.link && (
+              <Button 
+                className="w-full text-base sm:text-lg h-12"
+                onClick={() => window.open(projectDetail.link, '_blank', 'noopener,noreferrer')}
+              >
+                <Play className="w-5 h-5 mr-2" />
+                View Live
               </Button>
             )}
             {projectDetail.github && (
-              <Button variant="outline" asChild className="flex-1">
-                <a href={projectDetail.github} target="_blank" rel="noopener noreferrer">
-                  <Github className="w-4 h-4 mr-2" />
-                  View Source Code
-                </a>
+              <Button 
+                variant="outline" 
+                className="w-full text-base sm:text-lg h-12"
+                onClick={() => window.open(projectDetail.github, '_blank', 'noopener,noreferrer')}
+              >
+                <Github className="w-5 h-5 mr-2" />
+                GitHub
               </Button>
             )}
             {projectDetail.caseStudyUrl && (
-              <Button variant="outline" asChild className="flex-1">
-                <a href={projectDetail.caseStudyUrl} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  Case Study
-                </a>
+              <Button 
+                variant="outline" 
+                className="w-full text-base sm:text-lg h-12"
+                onClick={() => window.open(projectDetail.caseStudyUrl, '_blank', 'noopener,noreferrer')}
+              >
+                <ExternalLink className="w-5 h-5 mr-2" />
+                Case Study
               </Button>
             )}
           </div>
@@ -107,126 +113,86 @@ export const ProjectDetailModal = ({ project, isOpen, onClose }: ProjectDetailMo
           <Separator />
 
           {/* Project Details Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Left Column */}
-            <div className="space-y-6">
-              {/* Project Overview */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <Zap className="w-5 h-5" />
-                  Project Overview
-                </h3>
-                <div className="space-y-3 text-sm">
-                  {projectDetail.duration && (
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-gray-400" />
-                      <span className="text-gray-600">Duration:</span>
-                      <span className="font-medium">{projectDetail.duration}</span>
-                    </div>
-                  )}
-                  {projectDetail.teamSize && (
-                    <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4 text-gray-400" />
-                      <span className="text-gray-600">Team Size:</span>
-                      <span className="font-medium">{projectDetail.teamSize}</span>
-                    </div>
-                  )}
-                  {projectDetail.role && (
-                    <div className="flex items-center gap-2">
-                      <Award className="w-4 h-4 text-gray-400" />
-                      <span className="text-gray-600">My Role:</span>
-                      <span className="font-medium">{projectDetail.role}</span>
-                    </div>
-                  )}
-                </div>
+          <div className="space-y-6">
+            {/* Project Overview */}
+            <div>
+              <h3 className="text-lg sm:text-xl md:text-2xl font-semibold text-foreground mb-4 flex items-center gap-2">
+                <Zap className="w-5 h-5 sm:w-6 sm:h-6" />
+                Project Overview
+              </h3>
+              <div className="space-y-3 sm:space-y-4 text-sm sm:text-base md:text-lg">
+                {projectDetail.duration && (
+                  <div className="flex items-center gap-3">
+                    <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground flex-shrink-0" />
+                    <span className="text-muted-foreground">Duration:</span>
+                    <span className="font-medium text-foreground">{projectDetail.duration}</span>
+                  </div>
+                )}
+                {projectDetail.teamSize && (
+                  <div className="flex items-center gap-3">
+                    <Users className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground flex-shrink-0" />
+                    <span className="text-muted-foreground">Team Size:</span>
+                    <span className="font-medium text-foreground">{projectDetail.teamSize}</span>
+                  </div>
+                )}
+                {projectDetail.role && (
+                  <div className="flex items-center gap-3">
+                    <Award className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground flex-shrink-0" />
+                    <span className="text-muted-foreground">My Role:</span>
+                    <span className="font-medium text-foreground">{projectDetail.role}</span>
+                  </div>
+                )}
               </div>
+            </div>
 
-              {/* Technologies */}
+            {/* Technologies */}
+            <div>
+              <h3 className="text-lg sm:text-xl md:text-2xl font-semibold text-foreground mb-4">Technologies Used</h3>
+              <div className="flex flex-wrap gap-2 sm:gap-3">
+                {projectDetail.technologies.map((tech, index) => (
+                  <Badge key={index} variant="secondary" className="text-sm sm:text-base md:text-lg px-2 sm:px-3 py-1 sm:py-2">
+                    {tech}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+
+            {/* Key Features */}
+            {projectDetail.features && projectDetail.features.length > 0 && (
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Technologies Used</h3>
-                <div className="flex flex-wrap gap-2">
-                  {projectDetail.technologies.map((tech, index) => (
-                    <Badge key={index} variant="secondary" className="text-sm">
-                      {tech}
-                    </Badge>
+                <h3 className="text-lg sm:text-xl md:text-2xl font-semibold text-foreground mb-4">Key Features</h3>
+                <ul className="space-y-2 sm:space-y-3">
+                  {projectDetail.features.map((feature, index) => (
+                    <li key={index} className="flex items-start text-sm sm:text-base md:text-lg">
+                      <span className="text-accent mr-2 sm:mr-3 mt-1 text-lg sm:text-xl flex-shrink-0">•</span>
+                      <span className="text-muted-foreground leading-relaxed">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Results & Impact */}
+            {projectDetail.results && projectDetail.results.length > 0 && (
+              <div>
+                <h3 className="text-lg sm:text-xl md:text-2xl font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6" />
+                  Results & Impact
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  {projectDetail.results.map((result, index) => (
+                    <div key={index} className="text-center p-3 sm:p-4 bg-accent/10 rounded-lg border border-accent/20">
+                      <div className="text-xl sm:text-2xl md:text-3xl font-bold text-accent">
+                        {result.value}
+                      </div>
+                      <div className="text-xs sm:text-sm md:text-base text-muted-foreground mt-1">
+                        {result.metric}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
-
-              {/* Key Features */}
-              {projectDetail.features && projectDetail.features.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Key Features</h3>
-                  <ul className="space-y-2">
-                    {projectDetail.features.map((feature, index) => (
-                      <li key={index} className="flex items-start text-sm">
-                        <span className="text-blue-500 mr-2 mt-1">•</span>
-                        <span className="text-gray-700">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-
-            {/* Right Column */}
-            <div className="space-y-6">
-              {/* Challenges & Solutions */}
-              {projectDetail.challenges && (
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Challenges & Solutions</h3>
-                  <div className="space-y-3">
-                    {projectDetail.challenges.map((challenge, index) => (
-                      <div key={index} className="p-3 bg-gray-50 rounded-lg">
-                        <div className="font-medium text-gray-900 text-sm mb-1">
-                          Challenge: {challenge.title}
-                        </div>
-                        <div className="text-xs text-gray-600">
-                          Solution: {challenge.solution}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Results & Impact */}
-              {projectDetail.results && projectDetail.results.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5" />
-                    Results & Impact
-                  </h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    {projectDetail.results.map((result, index) => (
-                      <div key={index} className="text-center p-3 bg-green-50 rounded-lg">
-                        <div className="text-lg font-bold text-green-600">
-                          {result.value}
-                        </div>
-                        <div className="text-xs text-green-700">
-                          {result.metric}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Achievements */}
-              {projectDetail.achievements && projectDetail.achievements.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Key Achievements</h3>
-                  <ul className="space-y-2">
-                    {projectDetail.achievements.map((achievement, index) => (
-                      <li key={index} className="flex items-start text-sm">
-                        <Award className="w-4 h-4 text-yellow-500 mr-2 mt-0.5 flex-shrink-0" />
-                        <span className="text-gray-700">{achievement}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
+            )}
           </div>
 
           {/* Project Gallery */}
@@ -234,10 +200,10 @@ export const ProjectDetailModal = ({ project, isOpen, onClose }: ProjectDetailMo
             <>
               <Separator />
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Project Gallery</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <h3 className="text-lg sm:text-xl md:text-2xl font-semibold text-foreground mb-4">Project Gallery</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   {projectDetail.images.slice(1).map((image, index) => (
-                    <div key={index} className="relative overflow-hidden rounded-lg aspect-video bg-gray-100">
+                    <div key={index} className="relative overflow-hidden rounded-lg aspect-video bg-secondary/20">
                       <img
                         src={image}
                         alt={`${projectDetail.title} screenshot ${index + 2}`}
@@ -255,11 +221,11 @@ export const ProjectDetailModal = ({ project, isOpen, onClose }: ProjectDetailMo
             <>
               <Separator />
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Key Learnings</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <h3 className="text-lg sm:text-xl md:text-2xl font-semibold text-foreground mb-4">Key Learnings</h3>
+                <div className="space-y-3 sm:space-y-4">
                   {projectDetail.learnings.map((learning, index) => (
-                    <div key={index} className="p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400">
-                      <div className="text-sm text-gray-700">{learning}</div>
+                    <div key={index} className="p-3 sm:p-4 bg-accent/10 rounded-lg border-l-4 border-accent">
+                      <div className="text-sm sm:text-base md:text-lg text-muted-foreground leading-relaxed">{learning}</div>
                     </div>
                   ))}
                 </div>
