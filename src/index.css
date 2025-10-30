@@ -144,8 +144,13 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  html {
+    font-size: 90%; /* Reduce overall text by 10% */
+  }
+
   body {
     @apply bg-background text-foreground;
+    font-size: 1.08rem; /* base * 0.9 */
   }
 
   /* Mobile touch enhancements */

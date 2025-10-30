@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   User, Code, Briefcase, Mail, Github, Linkedin, Twitter,
   ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen, Gamepad2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { portfolioData } from '@/data/portfolioData';
 
 interface CollapsibleSidebarProps {
@@ -22,6 +23,24 @@ export const CollapsibleSidebar = ({
 }: CollapsibleSidebarProps) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [expandedProjects, setExpandedProjects] = useState(true);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatDateTime = (date: Date) => {
+    const day = date.getDate();
+    const month = date.toLocaleString('en-US', { month: 'long' });
+    const year = date.getFullYear();
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const seconds = date.getSeconds().toString().padStart(2, '0');
+    return `${day} ${month} ${year} • ${hours}:${minutes}:${seconds}`;
+  };
 
   const navItems = [
     { id: 'about', label: 'About', icon: User },
@@ -62,7 +81,7 @@ export const CollapsibleSidebar = ({
       )}
 
       {/* Sidebar Content */}
-      <div className="flex flex-col flex-1 overflow-y-auto p-8">
+      <div className="flex flex-col flex-1 overflow-y-auto p-7">
         {/* Profile Section */}
         <AnimatePresence mode="wait">
           {!isCollapsed && (
@@ -70,7 +89,7 @@ export const CollapsibleSidebar = ({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="flex flex-col items-center mb-10"
+              className="flex flex-col items-center mb-9"
             >
               <motion.button
                 whileHover={{ scale: 1.05 }}
@@ -108,9 +127,14 @@ export const CollapsibleSidebar = ({
                 onNavigate('about');
               }
             }}
-            className="flex justify-center mb-7 w-14 h-14 rounded-full bg-gradient-primary items-center shadow-glow hover:bg-gradient-primary/90 transition-all mx-auto"
+            className="flex justify-center mb-7 mx-auto"
           >
-            <User className="w-7 h-7 text-white" />
+            <Avatar className="w-12 h-12 border-2 border-primary shadow-glow hover:border-primary/90 transition-all">
+              <AvatarImage src="/profile_image.jpeg" alt={portfolioData.name} />
+              <AvatarFallback className="bg-gradient-primary">
+                <User className="w-7 h-7 text-white" />
+              </AvatarFallback>
+            </Avatar>
           </motion.button>
         )}
 
@@ -186,11 +210,27 @@ export const CollapsibleSidebar = ({
           animate={{ opacity: 1 }}
           className="border-t border-border p-6 relative z-10"
         >
+          {/* Connect with me */}
           <div className="bg-gradient-primary/10 rounded-lg p-5 border border-border/50 md:relative md:bottom-auto bottom-0">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-14 h-14 rounded-full bg-gradient-primary flex items-center justify-center shadow-glow">
-                <User className="w-7 h-7 text-white" />
+            {/* Availability Status - No box */}
+            {portfolioData.availability && (
+              <div className="flex items-center gap-2 mb-3 pb-3 border-b border-border/30">
+                <div className={`w-2.5 h-2.5 rounded-full ${portfolioData.availability.available ? 'bg-green-500' : 'bg-red-500'} animate-pulse`} />
+                <span className="text-xs font-medium text-foreground">
+                  {portfolioData.availability.statusText}
+                </span>
+                <span className="text-xs text-muted-foreground ml-auto">
+                  {formatDateTime(currentTime)}
+                </span>
               </div>
+            )}
+            <div className="flex items-center gap-3 mb-3">
+              <Avatar className="w-12 h-12 border-2 border-primary shadow-glow">
+                <AvatarImage src="/profile_image.jpeg" alt={portfolioData.name} />
+                <AvatarFallback className="bg-gradient-primary">
+                  <User className="w-7 h-7 text-white" />
+                </AvatarFallback>
+              </Avatar>
               <div>
                 <p className="text-base font-medium">Connect with me</p>
                 <p className="text-sm text-muted-foreground">
@@ -203,7 +243,7 @@ export const CollapsibleSidebar = ({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="hover:bg-sidebar-accent hover:text-accent transition-all flex-1 h-10"
+                  className="hover:bg-sidebar-accent hover:text-accent transition-all flex-1 h-9"
                   onClick={() => window.open(portfolioData.contact.github, '_blank')}
                 >
                   <Github className="h-5 w-5" />
@@ -213,7 +253,7 @@ export const CollapsibleSidebar = ({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="hover:bg-sidebar-accent hover:text-accent transition-all flex-1 h-10"
+                  className="hover:bg-sidebar-accent hover:text-accent transition-all flex-1 h-9"
                   onClick={() => window.open(portfolioData.contact.linkedin, '_blank')}
                 >
                   <Linkedin className="h-5 w-5" />
@@ -223,7 +263,7 @@ export const CollapsibleSidebar = ({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="hover:bg-sidebar-accent hover:text-accent transition-all flex-1 h-10"
+                  className="hover:bg-sidebar-accent hover:text-accent transition-all flex-1 h-9"
                   onClick={() => window.open(portfolioData.contact.twitter, '_blank')}
                 >
                   <Twitter className="h-5 w-5" />
@@ -232,7 +272,7 @@ export const CollapsibleSidebar = ({
               <Button
                 variant="ghost"
                 size="icon"
-                className="hover:bg-sidebar-accent hover:text-accent transition-all flex-1 h-10"
+                className="hover:bg-sidebar-accent hover:text-accent transition-all flex-1 h-9"
                 onClick={() =>
                   window.open(`mailto:${portfolioData.contact.email}`, '_blank')
                 }

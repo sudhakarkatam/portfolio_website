@@ -297,10 +297,10 @@ export const portfolioData: PortfolioData = {
         'Intuitive task management system'
       ],
       images: [
-        '/placeholder.svg',
-        '/placeholder.svg',
-        '/placeholder.svg'
+        '/personal-tracker.jpeg',
+        '/personal-tracker-1.jpeg'
       ],
+      image: '/personal-tracker.jpeg',
       learnings: [
         'Offline-first application development',
         'Mobile app performance optimization',
@@ -341,10 +341,10 @@ export const portfolioData: PortfolioData = {
         'Native-like mobile experience'
       ],
       images: [
-        '/placeholder.svg',
-        '/placeholder.svg',
-        '/placeholder.svg'
+        '/financial-calculator.jpeg',
+        '/financial-calculator-1.jpeg'
       ],
+      image: '/financial-calculator.jpeg',
       learnings: [
         'Financial calculation algorithms',
         'Progressive Web App optimization',
@@ -354,7 +354,7 @@ export const portfolioData: PortfolioData = {
     {
       id: '3',
       title: 'Ecommerce product recommendation',
-      description: 'A stock research and investment insights website offering curated fundamental and technical analysis of high-quality companies. Includes stock screeners, valuation models, and AI-assisted insights for smarter investing decisions. Designed for investors focused on long-term value creation.',
+      description: 'An ecommerce platform that allows users to browse and purchase products. It features a product catalog and a blog section. It is divided in categories and subcategories also collections wise to make easier to choose products and also have a admin dashboard to manage the products and the blog section.',
       technologies: ['Next.js', 'TypeScript', 'Tailwind CSS', 'Chart.js', 'Supabase', 'Vercel'],
       github: 'https://purevaluepicks.store',
       link: 'https://purevaluepicks.store',
@@ -467,7 +467,7 @@ export const portfolioData: PortfolioData = {
 
   availability: {
     available: true,
-    statusText: "Available for work",
+    statusText: "Open to opportunities",
     lastUpdated: new Date()
   },
 

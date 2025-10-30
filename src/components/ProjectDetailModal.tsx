@@ -1,9 +1,11 @@
 import * as React from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { ExternalLink, Github, Play, Calendar, Users, Award, Zap, TrendingUp } from 'lucide-react';
+import { ExternalLink, Github, Play, Calendar, Users, Award, Zap, TrendingUp, X } from 'lucide-react';
 import { ProjectDetail } from '@/types/portfolio';
 
 interface ProjectDetailModalProps {
@@ -14,9 +16,71 @@ interface ProjectDetailModalProps {
 }
 
 export const ProjectDetailModal = ({ project, isOpen, onClose, onNavigate }: ProjectDetailModalProps) => {
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [initialImageIndex, setInitialImageIndex] = useState(0);
+  const projectRef = useRef(project);
+  
+  // Update ref when project changes
+  useEffect(() => {
+    projectRef.current = project;
+  }, [project]);
+
+  // Handle next image navigation
+  const handleNextImage = useCallback(() => {
+    if (projectRef.current?.images && projectRef.current.images.length > 0) {
+      setSelectedImageIndex((prev) => (prev + 1) % projectRef.current!.images!.length);
+    }
+  }, []);
+
+  // Handle previous image navigation
+  const handlePrevImage = useCallback(() => {
+    if (projectRef.current?.images && projectRef.current.images.length > 0) {
+      setSelectedImageIndex((prev) => (prev - 1 + projectRef.current!.images!.length) % projectRef.current!.images!.length);
+    }
+  }, []);
+
+  // Handle closing lightbox and resetting to the image that was originally opened
+  const handleCloseLightbox = useCallback(() => {
+    setLightboxOpen(false);
+    setSelectedImageIndex(initialImageIndex);
+  }, [initialImageIndex]);
+
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (!lightboxOpen) return;
+      
+      if (e.key === 'Escape') {
+        handleCloseLightbox();
+      } else if (e.key === 'ArrowLeft') {
+        handlePrevImage();
+      } else if (e.key === 'ArrowRight') {
+        handleNextImage();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [lightboxOpen, handleNextImage, handlePrevImage, handleCloseLightbox]);
+
+  // Reset lightbox state when modal closes or project changes
+  useEffect(() => {
+    if (!isOpen) {
+      setLightboxOpen(false);
+      setSelectedImageIndex(0);
+      setInitialImageIndex(0);
+    }
+  }, [isOpen]);
+
   if (!project) return null;
 
   const projectDetail = project as ProjectDetail;
+  
+  const handleImageClick = (index: number) => {
+    setSelectedImageIndex(index);
+    setInitialImageIndex(index);
+    setLightboxOpen(true);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -38,6 +102,7 @@ export const ProjectDetailModal = ({ project, isOpen, onClose, onNavigate }: Pro
   };
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-background border-border w-[95vw] h-[95vh] md:w-auto md:h-auto md:max-w-4xl md:max-h-[90vh] [&>button]:opacity-100 [&>button]:bg-background/80 [&>button]:backdrop-blur-sm [&>button]:border [&>button]:border-border [&>button]:shadow-lg [&>button]:h-10 [&>button]:w-10 [&>button]:right-2 [&>button]:top-2 [&>button>svg]:h-5 [&>button>svg]:w-5 [&>button>svg]:text-foreground">
         <DialogHeader className="space-y-4">
@@ -66,17 +131,6 @@ export const ProjectDetailModal = ({ project, isOpen, onClose, onNavigate }: Pro
         </DialogHeader>
 
         <div className="space-y-4 sm:space-y-6">
-          {/* Project Image */}
-          {projectDetail.image && (
-            <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-secondary/20 to-secondary/40 h-48 sm:h-64 flex items-center justify-center">
-              <img
-                src={projectDetail.image}
-                alt={projectDetail.title}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          )}
-
           {/* Quick Actions */}
           <div className="flex flex-col gap-3">
             {projectDetail.link && (
@@ -196,19 +250,21 @@ export const ProjectDetailModal = ({ project, isOpen, onClose, onNavigate }: Pro
           </div>
 
           {/* Project Gallery */}
-          {projectDetail.images && projectDetail.images.length > 1 && (
+          {projectDetail.images && projectDetail.images.length > 0 && (
             <>
               <Separator />
               <div>
                 <h3 className="text-lg sm:text-xl md:text-2xl font-semibold text-foreground mb-4">Project Gallery</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                  {projectDetail.images.slice(1).map((image, index) => (
-                    <div key={index} className="relative overflow-hidden rounded-lg aspect-video bg-secondary/20">
+                  {projectDetail.images.map((image, index) => (
+                    <div key={index} className="relative overflow-hidden rounded-lg aspect-video bg-secondary/20 group">
                       <img
                         src={image}
-                        alt={`${projectDetail.title} screenshot ${index + 2}`}
-                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300 cursor-pointer"
+                        alt={`${projectDetail.title} screenshot ${index + 1}`}
+                        className="w-full h-full object-contain hover:scale-105 transition-transform duration-300 cursor-pointer"
+                        onClick={() => handleImageClick(index)}
                       />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 cursor-pointer" onClick={() => handleImageClick(index)} />
                     </div>
                   ))}
                 </div>
@@ -235,5 +291,37 @@ export const ProjectDetailModal = ({ project, isOpen, onClose, onNavigate }: Pro
         </div>
       </DialogContent>
     </Dialog>
+
+    {/* Lightbox for full-size image viewing */}
+      {lightboxOpen && projectDetail.images && projectDetail.images.length > 0 && createPortal(
+        <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-sm flex items-center justify-center p-4" onClick={handleCloseLightbox}>
+          <button
+            className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors z-10 p-3 bg-black/60 hover:bg-black/80 rounded-full backdrop-blur-sm shadow-lg"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleCloseLightbox();
+            }}
+            aria-label="Close lightbox"
+          >
+            <X className="h-7 w-7 sm:h-8 sm:w-8" />
+          </button>
+          
+          <div className="max-w-7xl max-h-full w-full h-full flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={projectDetail.images[selectedImageIndex]}
+              alt={`${projectDetail.title} - Image ${selectedImageIndex + 1}`}
+              className="max-w-full max-h-full object-contain"
+            />
+          </div>
+          
+          {projectDetail.images.length > 1 && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white text-sm z-10 bg-black/50 px-4 py-2 rounded-full backdrop-blur-sm">
+              {selectedImageIndex + 1} / {projectDetail.images.length}
+            </div>
+          )}
+        </div>
+      , document.body
+      )}
+    </>
   );
 };

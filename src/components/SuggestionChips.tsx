@@ -15,7 +15,7 @@ export const SuggestionChips = ({ onSelect }: SuggestionChipsProps) => {
   ];
 
   return (
-    <div className="flex flex-wrap gap-2 md:gap-3 justify-center">
+    <div className="flex flex-wrap gap-3 md:gap-4 justify-center">
       {suggestions.map((suggestion, index) => (
         <motion.div
           key={suggestion.id}

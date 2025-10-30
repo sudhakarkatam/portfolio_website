@@ -36,7 +36,7 @@ export const ProjectCard = ({ project, featured = false, onViewDetails }: Projec
       featured ? 'ring-2 ring-blue-200 shadow-md' : ''
     }`}>
       {/* Project Image/Thumbnail */}
-      <div className="relative overflow-hidden rounded-t-lg bg-gradient-to-br from-blue-50 to-indigo-100 h-48 flex items-center justify-center">
+      <div className="relative overflow-hidden rounded-t-lg bg-gradient-to-br from-blue-50 to-indigo-100 h-40 flex items-center justify-center">
         {project.image ? (
           <img
             src={project.image}
@@ -44,7 +44,7 @@ export const ProjectCard = ({ project, featured = false, onViewDetails }: Projec
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
         ) : (
-          <div className="text-6xl opacity-20">
+          <div className="text-5xl opacity-20">
             {project.category === 'web' ? '🌐' :
              project.category === 'mobile' ? '📱' :
              project.category === 'ai/ml' ? '🤖' : '💻'}
@@ -53,33 +53,33 @@ export const ProjectCard = ({ project, featured = false, onViewDetails }: Projec
 
         {/* Status Badge */}
         {project.status && (
-          <Badge className={`absolute top-3 right-3 ${getStatusColor(project.status)}`}>
+          <Badge className={`absolute top-2 right-2 ${getStatusColor(project.status)}`}>
             {project.status}
           </Badge>
         )}
 
         {/* Category Badge */}
         {project.category && (
-          <Badge variant="outline" className={`absolute top-3 left-3 ${getCategoryColor(project.category)}`}>
+          <Badge variant="outline" className={`absolute top-2 left-2 ${getCategoryColor(project.category)}`}>
             {project.category}
           </Badge>
         )}
 
         {/* Featured Badge */}
         {featured && (
-          <div className="absolute top-3 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-yellow-900 px-3 py-1 rounded-full text-xs font-semibold">
+          <div className="absolute top-2 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-yellow-900 px-2.5 py-0.5 rounded-full text-xs font-semibold">
             ⭐ Featured
           </div>
         )}
       </div>
 
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-2">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <CardTitle className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+            <CardTitle className="text-base font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
               {project.title}
             </CardTitle>
-            <CardDescription className="text-sm text-gray-600 mt-1">
+            <CardDescription className="text-xs text-gray-600 mt-1">
               {project.description.substring(0, 100) + '...'}
             </CardDescription>
           </div>
@@ -88,8 +88,8 @@ export const ProjectCard = ({ project, featured = false, onViewDetails }: Projec
 
       <CardContent className="pt-0">
         {/* Tech Stack */}
-        <div className="mb-4">
-          <div className="flex flex-wrap gap-2">
+        <div className="mb-3">
+          <div className="flex flex-wrap gap-1.5">
             {project.technologies.slice(0, 4).map((tech, index) => (
               <Badge key={index} variant="secondary" className="text-xs">
                 {tech}
@@ -104,16 +104,16 @@ export const ProjectCard = ({ project, featured = false, onViewDetails }: Projec
         </div>
 
         {/* Project Meta */}
-        <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+        <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
           {project.duration && (
             <div className="flex items-center gap-1">
-              <Calendar className="w-4 h-4" />
+              <Calendar className="w-3 h-3" />
               <span>{project.duration}</span>
             </div>
           )}
           {project.teamSize && (
             <div className="flex items-center gap-1">
-              <Users className="w-4 h-4" />
+              <Users className="w-3 h-3" />
               <span>{project.teamSize}</span>
             </div>
           )}
@@ -124,7 +124,7 @@ export const ProjectCard = ({ project, featured = false, onViewDetails }: Projec
           {project.demoUrl && (
             <Button size="sm" className="flex-1" asChild>
               <a href={project.demoUrl} target="_blank" rel="noopener noreferrer">
-                <Play className="w-4 h-4 mr-1" />
+                <Play className="w-3 h-3 mr-1" />
                 Demo
               </a>
             </Button>
@@ -132,7 +132,7 @@ export const ProjectCard = ({ project, featured = false, onViewDetails }: Projec
           {project.github && (
             <Button size="sm" variant="outline" className="flex-1" asChild>
               <a href={project.github} target="_blank" rel="noopener noreferrer">
-                <Github className="w-4 h-4 mr-1" />
+                <Github className="w-3 h-3 mr-1" />
                 Code
               </a>
             </Button>
@@ -143,15 +143,15 @@ export const ProjectCard = ({ project, featured = false, onViewDetails }: Projec
             onClick={() => onViewDetails?.(project)}
             className="flex-1"
           >
-            <ExternalLink className="w-4 h-4 mr-1" />
+            <ExternalLink className="w-3 h-3 mr-1" />
             Details
           </Button>
         </div>
 
         {/* Key Achievements */}
         {project.achievements && project.achievements.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-gray-100">
-            <div className="text-xs font-medium text-gray-700 mb-2">Key Achievements:</div>
+          <div className="mt-3 pt-3 border-t border-gray-100">
+            <div className="text-xs font-medium text-gray-700 mb-1.5">Key Achievements:</div>
             <ul className="text-xs text-gray-600 space-y-1">
               {project.achievements.slice(0, 2).map((achievement, index) => (
                 <li key={index} className="flex items-start">

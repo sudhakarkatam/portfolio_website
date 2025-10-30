@@ -35,7 +35,7 @@ export const ChatMessage = ({ message, isLast }: ChatMessageProps) => {
                 : 'chat-bubble-assistant'
             } shadow-md relative`}
           >
-            <div className="text-base md:text-lg whitespace-pre-wrap break-words leading-relaxed">
+            <div className="text-sm md:text-base whitespace-pre-wrap break-words leading-relaxed">
               {message.content.split('\n').map((line, index) => {
                 // Handle project boxes with borders
                 if (line.startsWith('┌─') || line.startsWith('│') || line.startsWith('└─')) {
