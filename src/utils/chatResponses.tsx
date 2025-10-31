@@ -3,6 +3,7 @@ import { ProjectDetail } from '@/components/ProjectDetail';
 import { ExperienceTimeline } from '@/components/ExperienceTimeline';
 import { SkillsVisualization } from '@/components/SkillsVisualization';
 import { AboutSection } from '@/components/AboutSection';
+import { ContactForm } from '@/components/ContactForm';
 import { ReactNode } from 'react';
 import { ProjectMiniGrid } from '@/components/ProjectMiniGrid';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -178,15 +179,18 @@ export const generateResponse = (query: string = '', projectId?: string, onNavig
     );
   }
 
-  // Contact responses
+  // Contact responses - show contact form
   if (
     lowercaseQuery.includes('contact') ||
     lowercaseQuery.includes('email') ||
     lowercaseQuery.includes('reach') ||
-    lowercaseQuery.includes('connect')
+    lowercaseQuery.includes('connect') ||
+    (lowercaseQuery.includes('send') && lowercaseQuery.includes('message')) ||
+    lowercaseQuery.includes('form')
   ) {
     return createResponse(
-      `📬 *Let's connect! Here's how to reach me:*\n\n┌─ 📧 **Email**\n│  ${portfolioData.contact.email}\n│  *(Click the email in About section to send message)*\n└─ Best for: opportunities & collaborations\n\n┌─ 💼 **LinkedIn**\n│  Professional Profile & Networking\n│  ${portfolioData.contact.linkedin}\n└─ Connect for: career opportunities\n\n┌─ 🐙 **GitHub**\n│  ${portfolioData.contact.github}\n└─ View my code & contributions\n\n┌─ 🐦 **Twitter**\n│  ${portfolioData.contact.twitter}\n└─ Tech discussions & updates\n\n💬 *I'm always open to discussing new opportunities, tech trends, or potential collaborations!*`
+      `Feel free to reach out, I'll get back to you soon.`,
+      <ContactForm />
     );
   }
 

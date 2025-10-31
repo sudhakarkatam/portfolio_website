@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { portfolioData } from '@/data/portfolioData';
-import { ProjectDetailModal } from './ProjectDetailModal';
+import { ProjectDetailPanel } from './ProjectDetailPanel';
+import { ProjectDetail } from '@/types/portfolio';
 
 interface ProjectMiniGridProps {
   onNavigate?: (section: string, projectId?: string) => void;
@@ -10,10 +11,10 @@ interface ProjectMiniGridProps {
 
 export const ProjectMiniGrid = ({ onNavigate }: ProjectMiniGridProps) => {
   const projects = portfolioData.projects;
-  const [selectedProject, setSelectedProject] = useState(null);
+  const [selectedProject, setSelectedProject] = useState<ProjectDetail | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const handleProjectClick = (project) => {
+  const handleProjectClick = (project: ProjectDetail) => {
     setSelectedProject(project);
     setIsModalOpen(true);
   };
@@ -57,7 +58,7 @@ export const ProjectMiniGrid = ({ onNavigate }: ProjectMiniGridProps) => {
           </Card>
         ))}
       </div>
-      <ProjectDetailModal
+      <ProjectDetailPanel
         project={selectedProject}
         isOpen={isModalOpen}
         onClose={handleCloseModal}

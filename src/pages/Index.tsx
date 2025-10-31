@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Send, RotateCcw, Menu, Home } from 'lucide-react';
+import { Send, RefreshCw, Menu, Home, ArrowUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CollapsibleSidebar } from '@/components/CollapsibleSidebar';
@@ -118,11 +118,22 @@ const Index = () => {
     }
   };
 
+  const handleRefresh = () => {
+    setMessages([]);
+    setInputValue('');
+    toast.success('Chat refreshed');
+  };
+
   const handleClearChat = () => {
     setMessages([]);
     setIsChatExpanded(false);
     setInputValue('');
     toast.success('Chat cleared successfully');
+  };
+
+  const handleOpenContactForm = () => {
+    // Open contact form in chat instead of popup
+    handleSendMessage('send message');
   };
 
   const handleGoHome = () => {
@@ -250,7 +261,7 @@ const Index = () => {
                  </motion.p>
               </div>
 
-              {/* Input Box - Positioned below Keep Smiling (Desktop Only) */}
+              {/* Input Box - Claude-style layout (Desktop Only) */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -258,42 +269,64 @@ const Index = () => {
                 className="hidden md:flex justify-center pt-3"
               >
                 <div className="w-full max-w-3xl mx-auto px-2">
-                  <div className="flex gap-3 md:gap-4 p-4 md:p-5 bg-sidebar/50 backdrop-blur-sm border border-border/50 rounded-lg shadow-lg">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={handleClearChat}
-                      title="Clear chat"
-                      className="hover:bg-secondary shrink-0 h-10 w-10 md:h-11 md:w-11 lg:h-12 lg:w-12 touch-manipulation"
-                    >
-                      <RotateCcw className="h-4 w-4 md:h-5 md:w-5" />
-                    </Button>
-                    <Input
-                      value={inputValue}
-                      onChange={(e) => setInputValue(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-                      placeholder="Ask about my skills, projects, or experience..."
-                      className="flex-1 bg-input border-0 focus:ring-0 text-base md:text-lg h-10 md:h-11 lg:h-12 min-h-[44px] touch-manipulation"
-                    />
-                    <Button
-                      onClick={() => handleSendMessage()}
-                      disabled={!inputValue.trim() || isTyping}
-                      className="bg-accent hover:bg-accent/90 shrink-0 h-10 w-10 md:h-11 md:w-11 lg:h-12 lg:w-12 touch-manipulation"
-                    >
-                      <Send className="h-4 w-4 md:h-5 md:w-5" />
-                    </Button>
+                  {/* Main Input Box Container - Icons inside input area */}
+                  <div className="relative bg-sidebar/50 backdrop-blur-sm border border-border/50 rounded-xl shadow-lg">
+                    {/* Input Field with absolute positioned icons */}
+                    <div className="relative flex items-start">
+                      <Input
+                        value={inputValue}
+                        onChange={(e) => setInputValue(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+                        placeholder="Ask about my skills, projects, or experience..."
+                        className="flex-1 bg-input border-0 focus:ring-0 text-base md:text-lg h-20 md:h-24 lg:h-28 min-h-[80px] pr-28 pl-4 touch-manipulation placeholder:text-muted-foreground/60 rounded-xl text-left"
+                        style={{ paddingTop: '0.5rem', paddingBottom: '3rem', lineHeight: '1.2' }}
+                      />
+                      
+                      {/* Left side icons - Bottom line of input area */}
+                      <div className="absolute left-3 bottom-3 flex gap-1.5 md:gap-2 z-10">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={handleRefresh}
+                          title="Refresh chat"
+                          className="h-8 w-8 md:h-9 md:w-9 hover:bg-secondary/80 rounded-lg"
+                        >
+                          <RefreshCw className="h-4 w-4 md:h-4 md:w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={handleOpenContactForm}
+                          title="Send a message"
+                          className="h-8 w-8 md:h-9 md:w-9 hover:bg-secondary/80 rounded-lg"
+                        >
+                          <Send className="h-4 w-4 md:h-4 md:w-4" />
+                        </Button>
+                      </div>
+                      
+                      {/* Right side - Send Button - Bottom line of input area */}
+                      <div className="absolute right-3 bottom-3 z-10">
+                        <Button
+                          onClick={() => handleSendMessage()}
+                          disabled={!inputValue.trim() || isTyping}
+                          className="bg-accent hover:bg-accent/90 shrink-0 h-8 w-8 md:h-9 md:w-9 rounded-lg touch-manipulation"
+                        >
+                          <ArrowUp className="h-4 w-4 md:h-4 md:w-4" />
+                        </Button>
+                      </div>
+                    </div>
                   </div>
+                  
+                  {/* Suggestion Chips - Directly below Input Box */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.8 }}
+                    className="flex flex-wrap gap-2 md:gap-3 justify-center mt-4 px-1"
+                  >
+                    <SuggestionChips onSelect={handleSuggestionClick} />
+                  </motion.div>
                 </div>
-              </motion.div>
-
-              {/* Suggestion Chips - Positioned below Input Box (Desktop Only) */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.8 }}
-                className="hidden md:flex flex-wrap gap-3 md:gap-4 justify-center px-1 pt-2"
-              >
-                <SuggestionChips onSelect={handleSuggestionClick} />
               </motion.div>
 
               {/* Suggestion Chips - For Mobile */}
@@ -314,15 +347,6 @@ const Index = () => {
           <div className="absolute bottom-0 left-0 right-0 p-3 md:p-5 lg:p-7 bg-sidebar/95 backdrop-blur-sm border-t border-border z-10">
             <div className="max-w-5xl mx-auto px-1">
               <div className="flex gap-3 md:gap-4">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleClearChat}
-                  title="Clear chat"
-                  className="hover:bg-secondary shrink-0 h-9 w-9 md:h-10 md:w-10 lg:h-11 lg:w-11 touch-manipulation"
-                >
-                  <RotateCcw className="h-4 w-4 md:h-4 md:w-4" />
-                </Button>
                 <Input
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
@@ -335,41 +359,84 @@ const Index = () => {
                   disabled={!inputValue.trim() || isTyping}
                   className="bg-accent hover:bg-accent/90 shrink-0 h-9 w-9 md:h-10 md:w-10 lg:h-11 lg:w-11 touch-manipulation"
                 >
-                  <Send className="h-4 w-4 md:h-4 md:w-4" />
+                  <ArrowUp className="h-4 w-4 md:h-4 md:w-4" />
+                </Button>
+              </div>
+              {/* Refresh and Send Message buttons below input - icon only */}
+              <div className="flex gap-2 mt-2 justify-start px-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleRefresh}
+                  title="Refresh chat"
+                  className="h-7 w-7 md:h-8 md:w-8 hover:bg-secondary/80"
+                >
+                  <RefreshCw className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleOpenContactForm}
+                  title="Send a message"
+                  className="h-7 w-7 md:h-8 md:w-8 hover:bg-secondary/80"
+                >
+                  <Send className="h-3.5 w-3.5 md:h-4 md:w-4" />
                 </Button>
               </div>
             </div>
           </div>
         )}
 
-        {/* Mobile Bottom Input - Only for mobile when chat is collapsed */}
+        {/* Mobile Bottom Input - Claude-style layout */}
         {!isChatExpanded && (
-          <div className="block md:hidden fixed bottom-0 left-0 right-0 p-4 bg-sidebar/95 backdrop-blur-sm border-t border-border z-40 safe-area-pb">
+          <div className="block md:hidden fixed bottom-0 left-0 right-0 p-3 bg-sidebar/95 backdrop-blur-sm border-t border-border z-40 safe-area-pb">
             <div className="max-w-5xl mx-auto px-2">
-              <div className="flex gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleClearChat}
-                  title="Clear chat"
-                  className="hover:bg-secondary shrink-0 h-11 w-11 touch-manipulation"
-                >
-                  <RotateCcw className="h-4 w-4" />
-                </Button>
-                <Input
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-                  placeholder="Ask about my skills, projects, or experience..."
-                  className="flex-1 bg-input border-border focus:ring-accent text-base h-11 min-h-[44px] touch-manipulation"
-                />
-                <Button
-                  onClick={() => handleSendMessage()}
-                  disabled={!inputValue.trim() || isTyping}
-                  className="bg-accent hover:bg-accent/90 shrink-0 h-11 w-11 touch-manipulation"
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
+              {/* Main Input Box Container - Icons inside input area */}
+              <div className="relative bg-sidebar/95 backdrop-blur-sm border border-border rounded-xl shadow-lg">
+                  {/* Input Field with absolute positioned icons */}
+                  <div className="relative flex items-start">
+                    <Input
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+                      placeholder="Ask about my skills, projects, or experience..."
+                      className="flex-1 bg-input border-0 focus:ring-0 text-base h-24 min-h-[96px] pr-24 pl-4 touch-manipulation placeholder:text-muted-foreground/60 rounded-xl text-left"
+                      style={{ paddingTop: '0.5rem', paddingBottom: '4rem', lineHeight: '1.2' }}
+                    />
+                  
+                  {/* Left side icons - Bottom line of input area */}
+                  <div className="absolute left-3 bottom-2.5 flex gap-1.5 z-10 touch-manipulation">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleRefresh}
+                      title="Refresh chat"
+                      className="h-8 w-8 hover:bg-secondary/80 rounded-lg touch-manipulation"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleOpenContactForm}
+                      title="Send a message"
+                      className="h-8 w-8 hover:bg-secondary/80 rounded-lg touch-manipulation"
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
+                  {/* Right side - Send Button - Bottom line of input area */}
+                  <div className="absolute right-3 bottom-2.5 z-10 touch-manipulation">
+                    <Button
+                      onClick={() => handleSendMessage()}
+                      disabled={!inputValue.trim() || isTyping}
+                      className="bg-accent hover:bg-accent/90 shrink-0 h-8 w-8 rounded-lg touch-manipulation"
+                    >
+                      <ArrowUp className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
