@@ -42,7 +42,7 @@ export const AboutSection = () => {
 
         <div className="flex flex-col gap-3 mt-6">
           <Button
-            onClick={() => window.open('https://drive.google.com/file/d/1ts6WNTgkD4t6cEjkLE7dRmGEU8NvxCYf/view?usp=drive_link', '_blank')}
+            onClick={() => window.open('https://drive.google.com/file/d/1qNzycHvflNO2lLynBD3ao9udHO0bJIYJ/view?usp=sharing', '_blank')}
             className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
           >
             <Download className="w-4 h-4 mr-2" />
