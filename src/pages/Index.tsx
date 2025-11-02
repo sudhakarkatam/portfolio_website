@@ -27,6 +27,7 @@ const Index = () => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [currentView, setCurrentView] = useState('home');
   const [selectedGame, setSelectedGame] = useState<string | null>(null);
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -38,10 +39,10 @@ const Index = () => {
     scrollToBottom();
   }, [messages, isTyping]);
 
- useEffect(() => {
-   // No welcome message needed - start with empty chat
-   setMessages([]);
- }, []);
+  useEffect(() => {
+    // No welcome message needed - start with empty chat
+    setMessages([]);
+  }, []);
 
   const handleSendMessage = async (text?: string, projectId?: string) => {
     const messageText = text || inputValue.trim();
@@ -52,31 +53,92 @@ const Index = () => {
       setIsChatExpanded(true);
     }
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: messageText,
-      timestamp: new Date(),
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-    setInputValue('');
-    setIsTyping(true);
-
-    // Simulate AI response delay
-    setTimeout(() => {
-      const response = generateResponse(messageText, projectId, handleNavigate);
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: response.text || '',
-        component: response.component,
+    // Only add user message if there's actual text (not sidebar project clicks)
+    if (messageText) {
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        role: 'user',
+        content: messageText,
         timestamp: new Date(),
       };
+      setMessages(prev => [...prev, userMessage]);
+    }
+    
+    setInputValue('');
+    setIsTyping(true);
+    setStreamingMessageId(null);
 
-      setMessages(prev => [...prev, assistantMessage]);
+    // Simulate AI thinking delay (more realistic)
+    const thinkingDelay = 500 + Math.random() * 500;
+    
+    setTimeout(() => {
+      const response = generateResponse(messageText, projectId, handleNavigate);
+      const responseText = response.text || '';
+      
+      // Skip streaming if there's no text response (sidebar project clicks)
+      if (!responseText && projectId) {
+        // Directly add the component without streaming
+        const directMessage: Message = {
+          id: 'direct-' + Date.now(),
+          role: 'assistant',
+          content: '',
+          component: response.component,
+          suggestions: response.suggestions,
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, directMessage]);
+        setIsTyping(false);
+        setStreamingMessageId(null);
+        return;
+      }
+      
+      // Stream the response word by word
+      const words = responseText.split(' ');
+      let wordIndex = 0;
+      const streamingId = 'streaming-' + Date.now();
+      
+      // Create initial streaming message
+      const streamingMessage: Message = {
+        id: streamingId,
+        role: 'assistant',
+        content: '',
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, streamingMessage]);
       setIsTyping(false);
-    }, 800 + Math.random() * 700);
+      setStreamingMessageId(streamingId);
+      
+      const streamInterval = setInterval(() => {
+        if (wordIndex < words.length) {
+          const currentText = words.slice(0, wordIndex + 1).join(' ');
+          
+          // Update streaming message in array
+          setMessages(prev => prev.map(msg => 
+            msg.id === streamingId 
+              ? { ...msg, content: currentText }
+              : msg
+          ));
+          wordIndex++;
+        } else {
+          clearInterval(streamInterval);
+          
+          // Final message with component and suggestions - replace streaming message
+          setMessages(prev => prev.map(msg => {
+            if (msg.id === streamingId) {
+              return {
+                ...msg,
+                content: responseText,
+                component: response.component,
+                suggestions: response.suggestions,
+              };
+            }
+            return msg;
+          }));
+          setStreamingMessageId(null);
+        }
+      }, 40); // Streaming speed (lower = faster)
+    }, thinkingDelay);
   };
 
   const handleSuggestionClick = (query: string) => {
@@ -108,10 +170,15 @@ const Index = () => {
       skills: 'What are your technical skills?',
       projects: 'Show me your projects',
       experience: 'What is your work experience?',
-      project: projectId ? `Tell me about ${portfolioData.projects.find(p => p.id === projectId)?.title}` : 'Show me your projects',
+      project: '', // Empty for sidebar project clicks - show mini details
+      'project-grid': 'Tell me more about this project', // Chat grid clicks - show full details
     };
     
     if (section === 'project' && projectId) {
+      // Sidebar click - mini details
+      handleSendMessage(queries[section], projectId);
+    } else if (section === 'project-grid' && projectId) {
+      // Chat grid click - full details
       handleSendMessage(queries[section], projectId);
     } else {
       handleSendMessage(queries[section]);
@@ -120,7 +187,10 @@ const Index = () => {
 
   const handleRefresh = () => {
     setMessages([]);
+    setIsChatExpanded(false);
     setInputValue('');
+    setCurrentView('home');
+    setSelectedGame(null);
     toast.success('Chat refreshed');
   };
 
@@ -207,9 +277,15 @@ const Index = () => {
             ref={chatContainerRef}
             className="absolute top-0 left-0 right-0 bottom-20 overflow-y-auto px-3 md:px-5 lg:px-7 py-4 md:py-7"
           >
-            <div className="max-w-5xl mx-auto w-full space-y-4 md:space-y-5">
+            <div className="max-w-5xl mx-auto w-full space-y-4 md:space-y-5 pb-8">
               {messages.map((message) => (
-                <ChatMessage key={message.id} message={message} />
+                <ChatMessage 
+                  key={message.id} 
+                  message={message}
+                  isStreaming={message.id === streamingMessageId}
+                  streamingText={message.id === streamingMessageId ? message.content : undefined}
+                  onSuggestionClick={handleSuggestionClick}
+                />
               ))}
               {isTyping && <TypingIndicator />}
               <div ref={messagesEndRef} />

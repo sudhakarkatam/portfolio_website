@@ -5,6 +5,7 @@ export interface Message {
   role: 'user' | 'assistant';
   content: string;
   component?: ReactNode;
+  suggestions?: string[];
   timestamp: Date;
 }
 

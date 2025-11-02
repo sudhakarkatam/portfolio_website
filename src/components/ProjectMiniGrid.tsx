@@ -1,8 +1,6 @@
-import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { portfolioData } from '@/data/portfolioData';
-import { ProjectDetailPanel } from './ProjectDetailPanel';
 import { ProjectDetail } from '@/types/portfolio';
 
 interface ProjectMiniGridProps {
@@ -11,17 +9,13 @@ interface ProjectMiniGridProps {
 
 export const ProjectMiniGrid = ({ onNavigate }: ProjectMiniGridProps) => {
   const projects = portfolioData.projects;
-  const [selectedProject, setSelectedProject] = useState<ProjectDetail | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleProjectClick = (project: ProjectDetail) => {
-    setSelectedProject(project);
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setSelectedProject(null);
+    // Instead of opening modal, send message to chat
+    // Use 'project-grid' to differentiate from sidebar clicks
+    if (onNavigate) {
+      onNavigate('project-grid', project.id);
+    }
   };
 
   return (
@@ -58,12 +52,6 @@ export const ProjectMiniGrid = ({ onNavigate }: ProjectMiniGridProps) => {
           </Card>
         ))}
       </div>
-      <ProjectDetailPanel
-        project={selectedProject}
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        onNavigate={onNavigate}
-      />
     </div>
   );
 };
