@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { User, Code, Briefcase, Award } from 'lucide-react';
+import { User, Code, Briefcase, Award, FolderKanban } from 'lucide-react';
 
 interface SuggestionChipsProps {
   onSelect: (query: string) => void;
@@ -10,8 +10,8 @@ export const SuggestionChips = ({ onSelect }: SuggestionChipsProps) => {
   const suggestions = [
     { id: 'about', label: 'About', icon: User, query: 'Tell me about yourself' },
     { id: 'skills', label: 'Skills', icon: Code, query: 'What are your technical skills?' },
-    { id: 'projects', label: 'Projects', icon: Briefcase, query: 'Show me your projects' },
-    { id: 'experience', label: 'Experience', icon: Award, query: 'What is your work experience?' },
+    { id: 'projects', label: 'Projects', icon: FolderKanban, query: 'Show me your projects' },
+    { id: 'experience', label: 'Experience', icon: Briefcase, query: 'What is your work experience?' },
   ];
 
   return (

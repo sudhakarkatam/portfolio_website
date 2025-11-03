@@ -28,6 +28,7 @@ const Index = () => {
   const [currentView, setCurrentView] = useState('home');
   const [selectedGame, setSelectedGame] = useState<string | null>(null);
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
+  const [sidebarKey, setSidebarKey] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -191,6 +192,7 @@ const Index = () => {
     setInputValue('');
     setCurrentView('home');
     setSelectedGame(null);
+    setSidebarKey(prev => prev + 1); // Force sidebar to remount and reset to collapsed
     toast.success('Chat refreshed');
   };
 
@@ -230,7 +232,7 @@ const Index = () => {
       <FloatingParticles />
 
       {/* Desktop Sidebar - Hidden on mobile */}
-      <div className="hidden md:block">
+      <div className="hidden md:block" key={sidebarKey}>
         <CollapsibleSidebar onNavigate={handleNavigate} onGoHome={handleGoHome} isMobile={false} />
       </div>
 
@@ -266,7 +268,7 @@ const Index = () => {
       <div className={`
         ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         fixed z-[60] transition-transform duration-300 h-full w-80 sm:w-96 bg-sidebar border-r border-border shadow-xl
-      `}>
+      `} key={`mobile-${sidebarKey}`}>
         <CollapsibleSidebar onNavigate={handleNavigate} onMobileClose={() => setIsMobileSidebarOpen(false)} onGoHome={handleGoHome} isMobile={true} />
       </div>
 
@@ -315,15 +317,15 @@ const Index = () => {
             <motion.div
               initial={{ y: 50, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              className="text-center space-y-5 md:space-y-7 lg:space-y-9 w-full max-w-4xl px-3"
+              className="text-center space-y-5 md:space-y-7 lg:space-y-9 w-full max-w-4xl px-4 md:px-6 lg:px-8"
             >
               {/* Keep Smiling Text */}
-              <div className="space-y-3 md:space-y-5 lg:space-y-6">
+              <div className="space-y-3 md:space-y-5 lg:space-y-6 overflow-visible">
                 <motion.h1
                   initial={{ scale: 0.5, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ delay: 0.2 }}
-                  className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold bg-gradient-to-r from-accent to-accent/60 bg-clip-text text-transparent leading-tight lg:scale-[0.7]"
+                  className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold bg-gradient-to-r from-accent to-accent/60 bg-clip-text text-transparent leading-tight lg:scale-[0.7] break-words overflow-visible"
                 >
                   Keep Smiling <span className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl"></span>
                 </motion.h1>

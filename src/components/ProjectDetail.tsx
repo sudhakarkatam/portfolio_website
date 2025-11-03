@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ExternalLink, Github, Calendar, Users, Award, TrendingUp, Lightbulb } from 'lucide-react';
+import { ExternalLink, Github, Calendar, Users, Award, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -30,6 +30,7 @@ export const ProjectDetail = ({ project }: ProjectDetailProps) => {
       case 'productivity': return 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30';
       case 'fintech': return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
       case 'e-commerce': return 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30';
+      case 'job portal': return 'bg-amber-500/20 text-amber-400 border-amber-500/30';
       default: return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
     }
   };
@@ -143,32 +144,7 @@ export const ProjectDetail = ({ project }: ProjectDetailProps) => {
         </div>
       )}
 
-      {/* Results */}
-      {project.results && project.results.length > 0 && (
-        <>
-          <Separator />
-          <div>
-            <h4 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-              <TrendingUp className="w-5 h-5" />
-              Results & Impact
-            </h4>
-            <div className="grid grid-cols-2 gap-3">
-              {project.results.map((result, index) => (
-                <div key={index} className="text-center p-4 bg-accent/10 rounded-lg border border-accent/20">
-                  <div className="text-2xl md:text-3xl font-bold text-accent">
-                    {result.value}
-                  </div>
-                  <div className="text-xs md:text-sm text-muted-foreground mt-1">
-                    {result.metric}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* Learnings */}
+             {/* Learnings */}
       {project.learnings && project.learnings.length > 0 && (
         <>
           <Separator />

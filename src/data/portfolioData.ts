@@ -170,6 +170,100 @@ export const portfolioData: PortfolioData = {
         'Performance optimization techniques'
       ]
     },
+    {
+      id: '4',
+      title: 'Droply - Share Anything, Instantly',
+      description: 'A temporary file and content sharing platform with end-to-end encryption. Create password-protected rooms to share text, files, code snippets, and URLs with customizable expiry times. No registration required - just instant, secure sharing.',
+      technologies: ['React', 'TypeScript', 'Supabase', 'MySQL', 'Vite', 'shadcn/ui', 'Tailwind CSS', 'Web Crypto API'],
+      github: 'https://github.com/sudhakarkatam/droply_app',
+      link: 'https://droply-app.netlify.app',
+      status: 'Live',
+      category: 'Productivity',
+      demoUrl: 'https://droply-app.netlify.app',
+      caseStudyUrl: '',
+      duration: '1 week',
+      teamSize: 'Solo Project',
+      role: 'Personal Project',
+      features: [
+        'Temporary rooms with customizable expiry times',
+        'End-to-end encryption with password protection',
+        'Share text, files, code snippets, and URLs',
+        'No registration required',
+        'Separate view/edit access links',
+        'Client-side encryption using AES-GCM'
+      ],
+      challenges: [
+        {
+          title: 'Implementing secure client-side encryption',
+          solution: 'Used Web Crypto API with AES-GCM and PBKDF2 for key derivation, ensuring data security without server-side decryption'
+        }
+      ],
+      results: [
+        { value: '100%', metric: 'Client-side encryption' },
+        { value: 'Zero', metric: 'Server access to shared content' }
+      ],
+      achievements: [
+        'Secure temporary file sharing platform',
+        'Privacy-first design with automatic expiry'
+      ],
+      images: [
+        '/placeholder.svg',
+        '/placeholder.svg'
+      ],
+      image: '/placeholder.svg',
+      learnings: [
+        'Web Crypto API implementation',
+        'Client-side encryption strategies',
+        'Secure file sharing architecture'
+      ]
+    },
+    {
+      id: '5',
+      title: 'JobFinder Hub',
+      description: 'A comprehensive job board platform with admin dashboard for managing job postings and blogs. Features skill-based job matching, intelligent tag system with related suggestions, and direct application redirects to company websites.',
+      technologies: ['React', 'TypeScript', 'Supabase', 'MySQL', 'Vercel', 'Framer Motion', 'Tailwind CSS', 'shadcn/ui'],
+      github: 'https://github.com/sudhakarkatam/Jobfinder-hub',
+      link: 'https://jobfinder-hub.vercel.app',
+      status: 'Live',
+      category: 'Job Portal',
+      demoUrl: 'https://jobfinder-hub.vercel.app',
+      caseStudyUrl: '',
+      duration: '2 weeks',
+      teamSize: 'Solo Project',
+      role: 'Full Stack Developer',
+      features: [
+        'Admin dashboard for job and blog management',
+        'Skill-based job matching and filtering',
+        'Smart tag system with related tag suggestions',
+        'Detailed job descriptions with apply now redirects',
+        'Blog section for career advice and insights',
+        'Search functionality with tag filtering'
+      ],
+      challenges: [
+        {
+          title: 'Building intelligent tag matching system',
+          solution: 'Implemented tag relationships and suggestions using Supabase queries with full-text search capabilities'
+        }
+      ],
+      results: [
+        { value: '1000+', metric: 'Job listings' },
+        { value: 'Real-time', metric: 'Tag suggestions' }
+      ],
+      achievements: [
+        'Comprehensive job discovery platform',
+        'Intelligent search and matching system'
+      ],
+      images: [
+        '/placeholder.svg',
+        '/placeholder.svg'
+      ],
+      image: '/placeholder.svg',
+      learnings: [
+        'Tag-based search implementation',
+        'Admin dashboard design patterns',
+        'Real-time data filtering and search functionality'
+      ]
+    },
   ],
   
   experience: [

@@ -29,7 +29,7 @@ export const ProjectMiniGrid = ({ onNavigate }: ProjectMiniGridProps) => {
           >
             <CardHeader className="pb-2">
               <CardTitle className="text-base md:text-lg leading-snug">
-                {project.title} {project.category === 'Productivity' ? '📱' : project.category === 'FinTech' ? '💰' : project.category === 'E-Commerce' ? '🛒' : '💻'}
+                {project.title} {project.category === 'Productivity' ? '📱' : project.category === 'FinTech' ? '💰' : project.category === 'E-Commerce' ? '🛒' : project.category === 'Job Portal' ? '💼' : '💻'}
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0 space-y-3">
