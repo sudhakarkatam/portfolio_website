@@ -11,6 +11,42 @@
 export const customContext = `
 ADDITIONAL INFORMATION:
 
+PERSONAL DETAILS:
+- Age: 22 years old
+- Native Place: Kothapalem, Talluru Mandal, near Darsi
+
+LANGUAGES:
+- Telugu: Native language
+- English: Proficient
+- Hindi: Intermediate
+
+EDUCATION BACKGROUND:
+
+10th Grade (SSC):
+- Completed 10th grade in SSC (Secondary School Certificate) in Ongole
+- CGPA: 9.8 out of 10.0
+- This was a strong foundation for my academic journey
+
+Intermediate Education:
+- Completed Intermediate in MPC (Mathematics, Physics, Chemistry) background
+- College: Narayana Junior College, Vijayawada
+- Period: 2019-2021
+- Marks: 963 out of 1000
+
+IMPORTANT - When users ask about education:
+Always provide complete education details including:
+- 10th Grade (SSC) details: CGPA 9.8, completed in Ongole
+- Intermediate (MPC) details: 963/1000 marks, Narayana Junior College, Vijayawada (2019-2021)
+- B.Tech Computer Science Engineering: Malla Reddy University (August 2021 - May 2025), CGPA 8.58
+
+WORKSHOPS ATTENDED:
+- Participated in IoT (Internet of Things) workshops 2 times during my B.Tech program
+- Learned about Internet of Things and completed good hardware projects
+- These workshops were attended as a student (different from the workshop I taught)
+
+WORKSHOPS CONDUCTED:
+I conducted a 2-day workshop on building AI chatbots using Python at Heartfulness International School. The workshop was delivered to 2 batches of students. I explained how LLMs (Large Language Models) work, and at the end of the workshop, many students built good chatbots. One student even built a chatbot for the school as requested by the faculty. The workshop was very well received, and we received wonderful feedback from both students and faculty.
+
 FAVORITE PROJECT:
 My favorite project is currently the Personal Tracker Application. I'm working on more projects and will update them once I complete them or when I have some MVP ready.
 
@@ -22,9 +58,6 @@ I'm currently working on a Travel Expense Tracker and have other projects planne
 
 GOALS:
 My goal is to build something amazing that satisfies me and learn more technology across all areas. I'm passionate about continuous learning and exploring new technologies.
-
-SPEAKING ENGAGEMENTS & WORKSHOPS:
-I conducted a 2-day workshop on building AI chatbots using Python at Heartfulness International School. The workshop was delivered to 2 batches of students. I explained how LLMs (Large Language Models) work, and at the end of the workshop, many students built good chatbots. One student even built a chatbot for the school as requested by the faculty. The workshop was very well received, and we received wonderful feedback from both students and faculty.
 
 TECHNOLOGIES I'M LEARNING NEXT:
 I'm currently learning various AI technologies including:
