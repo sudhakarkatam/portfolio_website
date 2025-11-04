@@ -45,7 +45,7 @@ WORKSHOPS ATTENDED:
 - These workshops were attended as a student (different from the workshop I taught)
 
 WORKSHOPS CONDUCTED:
-I conducted a 2-day workshop on building AI chatbots using Python at Heartfulness International School. The workshop was delivered to 2 batches of students. I explained how LLMs (Large Language Models) work, and at the end of the workshop, many students built good chatbots. One student even built a chatbot for the school as requested by the faculty. The workshop was very well received, and we received wonderful feedback from both students and faculty.
+I Led a 2-day workshop on building AI chatbots as an instructor using Python at Heartfulness International School. The workshop was delivered to 2 batches of students. I explained how LLMs (Large Language Models) work, and at the end of the workshop, many students built good chatbots. One student even built a chatbot for the school as requested by the faculty. The workshop was very well received, and we received wonderful feedback from both students and faculty.
 
 FAVORITE PROJECT:
 My favorite project is currently the Personal Tracker Application. I'm working on more projects and will update them once I complete them or when I have some MVP ready.

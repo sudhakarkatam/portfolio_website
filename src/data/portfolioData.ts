@@ -275,8 +275,6 @@ export const portfolioData: PortfolioData = {
       description: 'Completed Bachelor of Technology in Computer Science and Engineering with a specialization in IoT, possessing a strong foundation in software development, and emerging technologies. Actively participated in coding competitions, hackathons, and technical workshops throughout the academic journey.',
       achievements: [
         'Maintained 8.58 CGPA throughout the 4-year B.Tech program',
-        'Led multiple team projects and won coding competitions',
-        'participated in two IoT hands on workshops and build real projects',
       ],
       current: false,
       position: 'Computer Science Engineering Student',
