@@ -97,9 +97,10 @@ export const buildPortfolioContext = (): string => {
   // Contact
   context += `CONTACT INFORMATION:\n`;
   context += `Email: ${contact.email}\n`;
-  context += `GitHub: ${contact.github}\n`;
-  context += `LinkedIn: ${contact.linkedin}\n`;
-  if (contact.twitter) context += `Twitter: ${contact.twitter}\n`;
+  if (contact.github) context += `GitHub: ${contact.github}\n`;
+  if (contact.linkedin) context += `LinkedIn: ${contact.linkedin}\n`;
+  if (contact.twitter) context += `Twitter/X: ${contact.twitter}\n`;
+  if (contact.resume) context += `Resume/CV: ${contact.resume}\n`;
   context += `\nCONTACT FORM:\n`;
   context += `There is an interactive contact form available on this portfolio website that allows visitors to send messages directly. The contact form includes fields for:\n`;
   context += `- Name (required, minimum 2 characters)\n`;
@@ -170,13 +171,23 @@ export const buildPortfolioContext = (): string => {
   context += `- Connect it to ${name}'s actual experience and portfolio\n`;
   context += `- Use the portfolio data to provide relevant examples\n`;
   context += `- Make it personal and specific to ${name}'s journey\n\n`;
+  context += `HANDLING RESUME/CV REQUESTS:\n`;
+  context += `When users ask for resume, CV, curriculum vitae, or want to download/view resume:\n`;
+  if (contact.resume) {
+    context += `1. **Provide the resume link**: Format it as a clickable button [View Resume](${contact.resume}) or [Download Resume](${contact.resume})\n`;
+    context += `2. **Be helpful**: Mention that they can download or view it\n`;
+    context += `3. **Offer alternatives**: If they want specific information, you can provide it from the portfolio data\n`;
+  } else {
+    context += `Note: Resume link is not currently available in the contact information. If asked, politely mention that resume information is available through the portfolio, or direct them to contact ${name} directly.\n`;
+  }
+  context += `\n`;
   context += `HANDLING AMBIGUOUS QUESTIONS:\n`;
   context += `If a user's question is unclear, vague, or could have multiple interpretations:\n`;
   context += `1. **Acknowledge** that you need clarification\n`;
   context += `2. **Ask** specific follow-up questions to understand what they want\n`;
   context += `3. **Provide examples** of what you can help with based on the portfolio\n`;
   context += `4. **Suggest** related topics they might be interested in\n`;
-  context += `Example: If asked "Tell me about it" → "I'd be happy to help! Could you clarify what you'd like to know about? I can tell you about ${name}'s projects, experience, skills, hobbies, or availability. What interests you most?"\n\n`;
+  context += `Example: If asked "Tell me about it" → "I'd be happy to help! Could you clarify what you'd like to know about? I can tell you about ${name}'s projects, experience, skills, hobbies, resume, or availability. What interests you most?"\n\n`;
   context += `CONTEXTUAL HELP & CONVERSATION BUILDING:\n`;
   context += `After providing answers, help users explore the portfolio further:\n`;
   context += `1. **Suggest what to ask next**: At the end of responses, provide 2-3 relevant follow-up questions they might be interested in\n`;

@@ -98,6 +98,7 @@ export interface PortfolioData {
     email: string;
     github?: string;
     linkedin?: string;
+    resume?: string;
     twitter?: string;
   };
   availability?: AvailabilityStatus;

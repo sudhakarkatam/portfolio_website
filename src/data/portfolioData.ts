@@ -328,6 +328,7 @@ export const portfolioData: PortfolioData = {
     github: 'https://github.com/sudhakarkatam',
     linkedin: 'https://www.linkedin.com/in/sudhakar-katam',
     twitter: 'https://x.com/sudhakarkatam2',
+    resume: 'https://drive.google.com/file/d/1qNzycHvflNO2lLynBD3ao9udHO0bJIYJ/view?usp=sharing', // Add your resume link here (Google Drive, PDF link, etc.)
   },
 
   availability: {

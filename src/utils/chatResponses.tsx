@@ -229,6 +229,31 @@ export const generateResponse = (query: string = '', projectId?: string, onNavig
     );
   }
 
+  // Resume/CV queries - check before contact queries
+  const isResumeQuery = 
+    lowercaseQuery.includes('resume') ||
+    lowercaseQuery.includes('cv') ||
+    lowercaseQuery.includes('curriculum vitae') ||
+    lowercaseQuery.includes('download resume') ||
+    lowercaseQuery.includes('view resume');
+  
+  if (isResumeQuery) {
+    const { contact } = portfolioData;
+    if (contact.resume) {
+      return createResponse(
+        `Sure! Here's my resume:\n\n[View Resume](${contact.resume})\n\nYou can also download it from the link above. If you need any specific information from my resume, feel free to ask!`,
+        undefined,
+        ['Tell me about your experience', 'Show me your projects', 'What are your technical skills?']
+      );
+    } else {
+      return createResponse(
+        `I'm currently updating my resume. In the meantime, you can find all my information here on my portfolio - my projects, experience, skills, and more. Would you like to know about any specific aspect?`,
+        undefined,
+        ['Tell me about your experience', 'Show me your projects', 'Contact information']
+      );
+    }
+  }
+
   // Contact responses - detect contact queries in various formats
   const isContactQuery = 
     lowercaseQuery.includes('contact') ||
@@ -261,7 +286,8 @@ export const generateResponse = (query: string = '', projectId?: string, onNavig
     }
     
     // For general contact queries, show full contact information
-    const contactText = `## Contact Information\n\nI'd love to connect with you! Here are the best ways to reach me:\n\n### Email\n${contact.email}\n[Send Email](mailto:${contact.email})\n\n### Social Links\n*Connect with me on professional platforms*\n- [GitHub Profile](${contact.github})\n- [LinkedIn Profile](${contact.linkedin})\n${contact.twitter ? `- [Twitter/X Profile](${contact.twitter})\n` : ''}\n### Send a Message Through Form\nYou can also send me a message directly through the contact form on this website. Would you like me to show you the contact form?\n\nFeel free to reach out for opportunities, technical discussions, or just to say hello! 😊`;
+    const resumeSection = contact.resume ? `\n### Resume/CV\n[View Resume](${contact.resume})\n\n` : '';
+    const contactText = `## Contact Information\n\nI'd love to connect with you! Here are the best ways to reach me:\n\n### Email\n${contact.email}\n[Send Email](mailto:${contact.email})\n\n### Social Links\n*Connect with me on professional platforms*\n- [GitHub Profile](${contact.github})\n- [LinkedIn Profile](${contact.linkedin})\n${contact.twitter ? `- [Twitter/X Profile](${contact.twitter})\n` : ''}${resumeSection}### Send a Message Through Form\nYou can also send me a message directly through the contact form on this website. Would you like me to show you the contact form?\n\nFeel free to reach out for opportunities, technical discussions, or just to say hello! 😊`;
     
     return createResponse(
       contactText,
