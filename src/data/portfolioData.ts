@@ -40,7 +40,7 @@ export const portfolioData: PortfolioData = {
       link: 'https://github.com/sudhakarkatam/tracker22',
       status: 'Live',
       category: 'Productivity',
-      demoUrl: 'https://personal-tracker.vercel.app',
+      demoUrl: 'https://github.com/sudhakarkatam/tracker22',
       caseStudyUrl: '',
       duration: '2 weeks',
       teamSize: 'Solo Project',
@@ -87,7 +87,7 @@ export const portfolioData: PortfolioData = {
       link: 'https://github.com/sudhakarkatam/finance_cal',
       status: 'Live',
       category: 'FinTech',
-      demoUrl: 'https://finance-calculators.vercel.app',
+      demoUrl: 'https://github.com/sudhakarkatam/finance_cal',
       caseStudyUrl: '',
       duration: '2 weeks',
       teamSize: 'Solo Project',
@@ -127,11 +127,11 @@ export const portfolioData: PortfolioData = {
       title: 'Ecommerce product recommendation',
       description: 'An ecommerce platform that allows users to browse and purchase products. It features a product catalog and a blog section. It is divided in categories and subcategories also collections wise to make easier to choose products and also have a admin dashboard to manage the products and the blog section.',
       technologies: ['Next.js', 'TypeScript', 'Tailwind CSS', 'Chart.js', 'Supabase', 'Vercel'],
-      github: 'https://purevaluepicks.store',
-      link: 'https://purevaluepicks.store',
+      github: 'https://www.purevaluepicks.store',
+      link: 'https://www.purevaluepicks.store',
       status: 'Live',
       category: 'E-Commerce',
-      demoUrl: 'https://purevaluepicks.com',
+      demoUrl: 'https://www.purevaluepicks.store',
       caseStudyUrl: '',
       duration: '3 months',
       teamSize: 'Solo Project',
@@ -353,10 +353,10 @@ export const portfolioData: PortfolioData = {
     hobbies: [
       "Coding side projects and exploring new technologies",
       "Reading tech blogs and staying updated with industry trends",
-      "Playing strategy games and puzzle solving",
+      "Playing outdoor games: cricket, volleyball, badminton",
       "Learning about AI and machine learning concepts",
       "Contributing to open source projects",
-      "Photography and capturing moments"
+      "Content creation like Instagram and YouTube"
     ]
   }
 };

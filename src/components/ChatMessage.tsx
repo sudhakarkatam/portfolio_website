@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { Message } from '@/types/portfolio';
 import { Copy, Check, Sparkles } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { FollowUpSuggestions } from './FollowUpSuggestions';
@@ -72,9 +72,238 @@ export const ChatMessage = ({ message, isLast, isStreaming, streamingText, onSug
                 : 'chat-bubble-assistant'
             } shadow-md relative`}
           >
-            <div className="text-sm md:text-base whitespace-pre-wrap break-words leading-relaxed">
+            <div className="text-sm md:text-base whitespace-pre-wrap break-words leading-relaxed space-y-2">
               {contentToDisplay.split('\n').map((line, index, array) => {
                 const isLastLine = index === array.length - 1;
+                
+                // Helper function to render text with bold and italic formatting
+                const renderTextWithFormatting = (text: string, key: string) => {
+                  // First handle bold (**text**), then handle italic (*text*)
+                  const parts = text.split('**').map((part, i) => {
+                    if (i % 2 === 1) {
+                      // Bold text - also check for italics within
+                      return (
+                        <span key={`bold-${i}`} className="font-bold text-accent">
+                          {part.split(/(\*[^*]+\*)/).map((subPart, j) => {
+                            if (subPart.startsWith('*') && subPart.endsWith('*')) {
+                              return (
+                                <em key={`italic-${j}`} className="not-italic font-bold text-accent">
+                                  {subPart.slice(1, -1)}
+                                </em>
+                              );
+                            }
+                            return subPart;
+                          })}
+                        </span>
+                      );
+                    } else {
+                      // Regular text - check for italics
+                      return (
+                        <span key={`regular-${i}`}>
+                          {part.split(/(\*[^*]+\*)/).map((subPart, j) => {
+                            if (subPart.startsWith('*') && subPart.endsWith('*')) {
+                              return (
+                                <em key={`italic-${j}`} className="italic text-muted-foreground">
+                                  {subPart.slice(1, -1)}
+                                </em>
+                              );
+                            }
+                            return subPart;
+                          })}
+                        </span>
+                      );
+                    }
+                  });
+                  return <span key={key}>{parts}</span>;
+                };
+                
+                // Handle markdown links [text](url) and raw URLs - convert to buttons
+                const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+                const rawUrlRegex = /(https?:\/\/[^\s\)]+)/g;
+                const hasMarkdownLink = markdownLinkRegex.test(line);
+                const hasRawUrl = rawUrlRegex.test(line);
+                
+                if (hasMarkdownLink || hasRawUrl) {
+                  const parts: ReactNode[] = [];
+                  let lastIndex = 0;
+                  
+                  // First, handle markdown links
+                  if (hasMarkdownLink) {
+                    markdownLinkRegex.lastIndex = 0;
+                    let match;
+                    
+                    while ((match = markdownLinkRegex.exec(line)) !== null) {
+                      // Add text before the link
+                      if (match.index > lastIndex) {
+                        const beforeText = line.substring(lastIndex, match.index);
+                        if (beforeText.trim()) {
+                          parts.push(renderTextWithFormatting(beforeText, `text-${lastIndex}`));
+                        }
+                      }
+                      
+                      // Add button for the markdown link
+                      const url = match[2];
+                      const isMailto = url.startsWith('mailto:');
+                      parts.push(
+                        <Button
+                          key={`link-${match.index}`}
+                          variant="outline"
+                          size="sm"
+                          className="mx-1 h-7 text-xs md:text-sm inline-flex items-center cursor-pointer"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (isMailto) {
+                              window.location.href = url;
+                            } else {
+                              window.open(url, '_blank', 'noopener,noreferrer');
+                            }
+                          }}
+                          type="button"
+                        >
+                          {match[1]}
+                        </Button>
+                      );
+                      
+                      lastIndex = match.index + match[0].length;
+                    }
+                  }
+                  
+                  // Then handle raw URLs (only if not already processed as markdown)
+                  if (hasRawUrl && !hasMarkdownLink) {
+                    rawUrlRegex.lastIndex = 0;
+                    let match;
+                    
+                    while ((match = rawUrlRegex.exec(line)) !== null) {
+                      // Add text before the URL
+                      if (match.index > lastIndex) {
+                        const beforeText = line.substring(lastIndex, match.index);
+                        if (beforeText.trim()) {
+                          parts.push(renderTextWithFormatting(beforeText, `text-${lastIndex}`));
+                        }
+                      }
+                      
+                      // Extract a friendly name from URL or use shortened version
+                      const url = match[1];
+                      let buttonText = url;
+                      try {
+                        const urlObj = new URL(url);
+                        const hostname = urlObj.hostname.replace('www.', '');
+                        buttonText = hostname.split('.')[0] || 'Visit Link';
+                        // Capitalize first letter
+                        buttonText = buttonText.charAt(0).toUpperCase() + buttonText.slice(1);
+                      } catch {
+                        // If URL parsing fails, use shortened version
+                        buttonText = url.length > 30 ? url.substring(0, 30) + '...' : url;
+                      }
+                      
+                      // Add button for the raw URL
+                      parts.push(
+                        <Button
+                          key={`url-${match.index}`}
+                          variant="outline"
+                          size="sm"
+                          className="mx-1 h-7 text-xs md:text-sm inline-flex items-center cursor-pointer"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            window.open(url, '_blank', 'noopener,noreferrer');
+                          }}
+                          type="button"
+                        >
+                          {buttonText}
+                        </Button>
+                      );
+                      
+                      lastIndex = match.index + match[0].length;
+                    }
+                  }
+                  
+                  // Add remaining text after last link
+                  if (lastIndex < line.length) {
+                    const afterText = line.substring(lastIndex);
+                    if (afterText.trim()) {
+                      parts.push(renderTextWithFormatting(afterText, `text-${lastIndex}`));
+                    }
+                  }
+                  
+                  return (
+                    <div key={index} className="flex flex-wrap items-center gap-1">
+                      {parts}
+                      {isStreaming && isLastLine && (
+                        <motion.span
+                          animate={{ opacity: [1, 0.3, 1] }}
+                          transition={{ duration: 0.8, repeat: Infinity }}
+                          className="inline-block w-2 h-4 bg-current ml-1"
+                        />
+                      )}
+                    </div>
+                  );
+                }
+                
+                // Handle headings (## or ###)
+                if (line.startsWith('## ')) {
+                  return (
+                    <h3 key={index} className="text-lg md:text-xl font-bold text-accent mt-4 mb-2">
+                      {line.replace('## ', '')}
+                    </h3>
+                  );
+                }
+                if (line.startsWith('### ')) {
+                  return (
+                    <h4 key={index} className="text-base md:text-lg font-semibold text-foreground mt-3 mb-1">
+                      {line.replace('### ', '')}
+                    </h4>
+                  );
+                }
+                
+                // Handle bullet points
+                if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
+                  const bulletText = line.replace(/^[-*]\s+/, '');
+                  return (
+                    <div key={index} className="flex items-start gap-2 ml-2">
+                      <span className="text-accent mt-1">•</span>
+                      <span className="flex-1">
+                        {bulletText.split('**').map((part, i) => {
+                          if (i % 2 === 1) {
+                            // Bold text
+                            return (
+                              <span key={i} className="font-bold text-accent">
+                                {part.split(/(\*[^*]+\*)/).map((subPart, j) => {
+                                  if (subPart.startsWith('*') && subPart.endsWith('*')) {
+                                    return (
+                                      <em key={`italic-${j}`} className="not-italic font-bold text-accent">
+                                        {subPart.slice(1, -1)}
+                                      </em>
+                                    );
+                                  }
+                                  return subPart;
+                                })}
+                              </span>
+                            );
+                          } else {
+                            // Regular text - handle italics
+                            return (
+                              <span key={i}>
+                                {part.split(/(\*[^*]+\*)/).map((subPart, j) => {
+                                  if (subPart.startsWith('*') && subPart.endsWith('*')) {
+                                    return (
+                                      <em key={`italic-${j}`} className="italic text-muted-foreground">
+                                        {subPart.slice(1, -1)}
+                                      </em>
+                                    );
+                                  }
+                                  return subPart;
+                                })}
+                              </span>
+                            );
+                          }
+                        })}
+                      </span>
+                    </div>
+                  );
+                }
+                
                 // Handle project boxes with borders
                 if (line.startsWith('┌─') || line.startsWith('│') || line.startsWith('└─')) {
                   return (
@@ -85,12 +314,50 @@ export const ChatMessage = ({ message, isLast, isStreaming, streamingText, onSug
                     </div>
                   );
                 }
+                
+                // Handle empty lines for spacing
+                if (line.trim() === '') {
+                  return <div key={index} className="h-2" />;
+                }
+                
                 // Handle regular lines
                 return (
                   <div key={index}>
-                    {line.split('**').map((part, i) =>
-                      i % 2 === 1 ? <span key={i} className="font-bold text-accent">{part}</span> : part
-                    )}
+                    {line.split('**').map((part, i) => {
+                      if (i % 2 === 1) {
+                        // Bold text
+                        return (
+                          <span key={i} className="font-bold text-accent">
+                            {part.split(/(\*[^*]+\*)/).map((subPart, j) => {
+                              if (subPart.startsWith('*') && subPart.endsWith('*')) {
+                                return (
+                                  <em key={`italic-${j}`} className="not-italic font-bold text-accent">
+                                    {subPart.slice(1, -1)}
+                                  </em>
+                                );
+                              }
+                              return subPart;
+                            })}
+                          </span>
+                        );
+                      } else {
+                        // Regular text - handle italics
+                        return (
+                          <span key={i}>
+                            {part.split(/(\*[^*]+\*)/).map((subPart, j) => {
+                              if (subPart.startsWith('*') && subPart.endsWith('*')) {
+                                return (
+                                  <em key={`italic-${j}`} className="italic text-muted-foreground">
+                                    {subPart.slice(1, -1)}
+                                  </em>
+                                );
+                              }
+                              return subPart;
+                            })}
+                          </span>
+                        );
+                      }
+                    })}
                     {isStreaming && isLastLine && (
                       <motion.span
                         animate={{ opacity: [1, 0.3, 1] }}

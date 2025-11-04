@@ -4,7 +4,7 @@ export const gamesData: Game[] = [
   {
     id: 'tic-tac-toe',
     title: 'Tic-Tac-Toe',
-    description: 'Classic 3x3 grid game. Play against the computer or challenge a friend!',
+    description: 'Classic 3x3 grid game. Play against the computer on easy difficulty!',
     category: 'entertainment',
     icon: 'Grid3X3'
   },

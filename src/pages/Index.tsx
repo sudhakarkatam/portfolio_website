@@ -16,8 +16,14 @@ import { CodeQuiz } from '@/components/games/CodeQuiz';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Message } from '@/types/portfolio';
 import { generateResponse } from '@/utils/chatResponses';
+import { generateGeminiResponse } from '@/utils/geminiService';
+import { generateOpenRouterResponse } from '@/utils/openRouterService';
 import { portfolioData } from '@/data/portfolioData';
 import { toast } from 'sonner';
+import { ModelSelector, AVAILABLE_MODELS } from '@/components/ModelSelector';
+import { ContactForm } from '@/components/ContactForm';
+import { DiceRoll } from '@/components/chatGames/DiceRoll';
+import { CoinToss } from '@/components/chatGames/CoinToss';
 
 const Index = () => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -29,6 +35,7 @@ const Index = () => {
   const [selectedGame, setSelectedGame] = useState<string | null>(null);
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const [sidebarKey, setSidebarKey] = useState(0);
+  const [selectedModel, setSelectedModel] = useState('normal');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -69,6 +76,160 @@ const Index = () => {
     setIsTyping(true);
     setStreamingMessageId(null);
 
+    // AI Mode: Use Gemini API
+    const isAIModeEnabled = selectedModel !== 'normal';
+    if (isAIModeEnabled && messageText) {
+      try {
+        // Build conversation history for context
+        const conversationHistory = messages
+          .filter(msg => msg.role === 'user' || msg.role === 'assistant')
+          .slice(-10) // Last 10 messages for context
+          .map(msg => ({
+            role: msg.role as 'user' | 'assistant',
+            content: msg.content || '',
+          }));
+
+        const selectedModelOption = AVAILABLE_MODELS.find(m => m.id === selectedModel);
+        const modelName = selectedModelOption?.model || '';
+        const apiVersion = selectedModelOption?.apiVersion || '';
+        const provider = selectedModelOption?.provider || 'gemini';
+        
+        // Call appropriate API based on provider
+        let aiResponse: string;
+        if (provider === 'openrouter') {
+          aiResponse = await generateOpenRouterResponse(messageText, conversationHistory, modelName);
+        } else {
+          aiResponse = await generateGeminiResponse(messageText, conversationHistory, modelName, apiVersion);
+        }
+        
+        // Stream the AI response word by word
+        const words = aiResponse.split(' ');
+        let wordIndex = 0;
+        const streamingId = 'streaming-' + Date.now();
+        
+        // Create initial streaming message
+        const streamingMessage: Message = {
+          id: streamingId,
+          role: 'assistant',
+          content: '',
+          timestamp: new Date(),
+        };
+        
+        setMessages(prev => [...prev, streamingMessage]);
+        setIsTyping(false);
+        setStreamingMessageId(streamingId);
+        
+        // Check if this is a "send message" query (different from "contact")
+        const isSendMessageQuery = messageText.toLowerCase().includes('send message') || 
+                                   messageText.toLowerCase().includes('send a message');
+        
+        // Check if this is a general contact query (email, contact, reach, connect)
+        const isContactQuery = !isSendMessageQuery && (
+                               messageText.toLowerCase().includes('contact') || 
+                               messageText.toLowerCase().includes('email') ||
+                               messageText.toLowerCase().includes('reach') ||
+                               messageText.toLowerCase().includes('connect'));
+        
+        // Check for chat games (dice roll and coin toss) - be more specific
+        const lowerQuery = messageText.toLowerCase();
+        const isDiceRollQuery = lowerQuery.includes('roll dice') || 
+                               lowerQuery.includes('roll a dice') ||
+                               (lowerQuery.includes('dice') && (lowerQuery.includes('roll') || lowerQuery.includes('throw')));
+        
+        const isCoinTossQuery = lowerQuery.includes('toss coin') || 
+                               lowerQuery.includes('toss a coin') ||
+                               lowerQuery.includes('flip coin') ||
+                               lowerQuery.includes('flip a coin') ||
+                               (lowerQuery.includes('coin') && (lowerQuery.includes('toss') || lowerQuery.includes('flip')));
+        
+        const streamInterval = setInterval(() => {
+          if (wordIndex < words.length) {
+            const currentText = words.slice(0, wordIndex + 1).join(' ');
+            
+            // Update streaming message in array
+            setMessages(prev => prev.map(msg => 
+              msg.id === streamingId 
+                ? { ...msg, content: currentText }
+                : msg
+            ));
+            wordIndex++;
+          } else {
+            clearInterval(streamInterval);
+            setStreamingMessageId(null);
+            
+            // If it's a "send message" query, always show the ContactForm component
+            if (isSendMessageQuery) {
+              setMessages(prev => prev.map(msg => 
+                msg.id === streamingId 
+                  ? { ...msg, component: <ContactForm /> }
+                  : msg
+              ));
+            }
+            
+            // If it's a dice roll query, show the DiceRoll component
+            if (isDiceRollQuery && !isCoinTossQuery) {
+              setMessages(prev => prev.map(msg => 
+                msg.id === streamingId 
+                  ? { ...msg, component: <DiceRoll /> }
+                  : msg
+              ));
+            }
+            
+            // If it's a coin toss query, show the CoinToss component
+            if (isCoinTossQuery && !isDiceRollQuery) {
+              setMessages(prev => prev.map(msg => 
+                msg.id === streamingId 
+                  ? { ...msg, component: <CoinToss /> }
+                  : msg
+              ));
+            }
+            
+            // For contact queries, AI will show the contact format in the response text
+            // No component needed as AI provides the full contact information
+            // For general contact queries, only show form if user asks for it in the response
+            // (AI will suggest it in the text, so we don't auto-show it)
+          }
+        }, 30); // Slightly faster for AI responses
+        
+      } catch (error) {
+        console.error('Error generating AI response:', error);
+        setIsTyping(false);
+        setStreamingMessageId(null);
+        
+        // Better error messages with suggestions
+        let errorContent = 'Sorry, I encountered an error while generating a response.\n\n**What you can do:**\n- Try again in a few moments\n- Switch to **Normal Mode** (using the model selector)\n- Try a different AI model';
+        
+        if (error instanceof Error) {
+          if (error.message.includes('503') || error.message.includes('overloaded')) {
+            errorContent = 'The AI model is currently overloaded. Please try again in a few moments.\n\n**What you can do:**\n- Wait a moment and try again\n- Switch to **Normal Mode** (more reliable)\n- Try a different AI model from the dropdown';
+          } else if (error.message.includes('401') || error.message.includes('API key')) {
+            errorContent = 'There\'s an issue with the API configuration. Please check your API key settings.\n\n**What you can do:**\n- Switch to **Normal Mode** (doesn\'t require API keys)\n- Check your API key configuration in environment variables';
+          } else if (error.message.includes('429') || error.message.includes('rate limit')) {
+            errorContent = 'Rate limit exceeded. The free tier has usage limits.\n\n**What you can do:**\n- Wait a few seconds and try again\n- Switch to **Normal Mode** (no rate limits)\n- Try a different AI model from the dropdown';
+          } else {
+            errorContent = `Sorry, I encountered an error: ${error.message}\n\n**What you can do:**\n- Try again in a few moments\n- Switch to **Normal Mode** (more reliable)\n- Try a different AI model`;
+          }
+        }
+        
+        const errorMessage: Message = {
+          id: 'error-' + Date.now(),
+          role: 'assistant',
+          content: errorContent,
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, errorMessage]);
+        
+        // Show appropriate toast based on error type
+        if (error instanceof Error && (error.message.includes('503') || error.message.includes('overloaded'))) {
+          toast.error('Model is overloaded. Please try again in a few moments.');
+        } else {
+          toast.error('Failed to generate AI response. Please try again.');
+        }
+      }
+      return;
+    }
+
+    // Normal Mode: Use existing response system
     // Simulate AI thinking delay (more realistic)
     const thinkingDelay = 500 + Math.random() * 500;
     
@@ -272,12 +433,12 @@ const Index = () => {
         <CollapsibleSidebar onNavigate={handleNavigate} onMobileClose={() => setIsMobileSidebarOpen(false)} onGoHome={handleGoHome} isMobile={true} />
       </div>
 
-      <main className="flex-1 relative">
+      <main className="flex-1 relative flex flex-col">
         {/* Chat Messages Area - Scrollable above input when expanded */}
         {isChatExpanded && (
           <div
             ref={chatContainerRef}
-            className="absolute top-0 left-0 right-0 bottom-20 overflow-y-auto px-3 md:px-5 lg:px-7 py-4 md:py-7"
+            className="flex-1 overflow-y-auto px-3 md:px-5 lg:px-7 py-4 md:py-7 min-h-0"
           >
             <div className="max-w-5xl mx-auto w-full space-y-4 md:space-y-5 pb-8">
               {messages.map((message) => (
@@ -382,8 +543,12 @@ const Index = () => {
                         </Button>
                       </div>
                       
-                      {/* Right side - Send Button - Bottom line of input area */}
-                      <div className="absolute right-3 bottom-3 z-10">
+                      {/* Right side - Model Selector and Send Button - Bottom line of input area */}
+                      <div className="absolute right-3 bottom-3 flex items-center gap-2 z-10">
+                        <ModelSelector 
+                          selectedModel={selectedModel}
+                          onModelChange={setSelectedModel}
+                        />
                         <Button
                           onClick={() => handleSendMessage()}
                           disabled={!inputValue.trim() || isTyping}
@@ -422,16 +587,18 @@ const Index = () => {
 
         {/* Bottom Input Area - Visible when chat is expanded */}
         {isChatExpanded && (
-          <div className="absolute bottom-0 left-0 right-0 p-3 md:p-5 lg:p-7 bg-sidebar/95 backdrop-blur-sm border-t border-border z-10">
+          <div className="flex-shrink-0 p-3 md:p-5 lg:p-7 bg-sidebar/95 backdrop-blur-sm border-t border-border z-10">
             <div className="max-w-5xl mx-auto px-1">
               <div className="flex gap-3 md:gap-4">
-                <Input
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-                  placeholder="Ask about my skills, projects, or experience..."
-                  className="flex-1 bg-input border-border focus:ring-accent text-sm md:text-base h-9 md:h-10 lg:h-11 min-h-[40px] touch-manipulation"
-                />
+                <div className="relative flex-1">
+                  <Input
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+                    placeholder="Ask about my skills, projects, or experience..."
+                    className="flex-1 bg-input border-border focus:ring-accent text-sm md:text-base h-9 md:h-10 lg:h-11 min-h-[40px] touch-manipulation"
+                  />
+                </div>
                 <Button
                   onClick={() => handleSendMessage()}
                   disabled={!inputValue.trim() || isTyping}
@@ -439,6 +606,13 @@ const Index = () => {
                 >
                   <ArrowUp className="h-4 w-4 md:h-4 md:w-4" />
                 </Button>
+              </div>
+              {/* Model Selector - Below input box, right aligned */}
+              <div className="flex justify-end mt-2">
+                <ModelSelector 
+                  selectedModel={selectedModel}
+                  onModelChange={setSelectedModel}
+                />
               </div>
               {/* Refresh and Send Message buttons below input - icon only */}
               <div className="flex gap-2 mt-2 justify-start px-1">
@@ -481,7 +655,7 @@ const Index = () => {
                       className="flex-1 bg-input border-0 focus:ring-0 text-base h-24 min-h-[96px] pr-24 pl-4 touch-manipulation placeholder:text-muted-foreground/60 rounded-xl text-left"
                       style={{ paddingTop: '0.5rem', paddingBottom: '4rem', lineHeight: '1.2' }}
                     />
-                  
+                    
                   {/* Left side icons - Bottom line of input area */}
                   <div className="absolute left-3 bottom-2.5 flex gap-1.5 z-10 touch-manipulation">
                     <Button
@@ -514,6 +688,13 @@ const Index = () => {
                       <ArrowUp className="h-4 w-4" />
                     </Button>
                   </div>
+                </div>
+                {/* Model Selector - Below input box, right aligned */}
+                <div className="flex justify-end mt-2">
+                  <ModelSelector 
+                    selectedModel={selectedModel}
+                    onModelChange={setSelectedModel}
+                  />
                 </div>
               </div>
             </div>

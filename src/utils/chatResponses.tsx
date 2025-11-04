@@ -229,19 +229,44 @@ export const generateResponse = (query: string = '', projectId?: string, onNavig
     );
   }
 
-  // Contact responses
-  if (
+  // Contact responses - detect contact queries in various formats
+  const isContactQuery = 
     lowercaseQuery.includes('contact') ||
     lowercaseQuery.includes('email') ||
     lowercaseQuery.includes('reach') ||
     lowercaseQuery.includes('connect') ||
-    (lowercaseQuery.includes('send') && lowercaseQuery.includes('message')) ||
-    lowercaseQuery.includes('form')
-  ) {
+    lowercaseQuery.includes('get in touch') ||
+    lowercaseQuery.includes('how to reach') ||
+    lowercaseQuery.includes('where to contact') ||
+    lowercaseQuery.includes('your email') ||
+    lowercaseQuery.includes('social media') ||
+    lowercaseQuery.includes('linkedin') ||
+    lowercaseQuery.includes('github profile') ||
+    lowercaseQuery.includes('form');
+  
+  const isSendMessageQuery = (lowercaseQuery.includes('send') && lowercaseQuery.includes('message'));
+  
+  if (isContactQuery || isSendMessageQuery) {
+    const { contact } = portfolioData;
+    
+    // For "send message" queries, show form with social links
+    if (isSendMessageQuery) {
+      const sendMessageText = `I'd love to hear from you! Fill out the form below to send me a message, and I'll get back to you as soon as possible.\n\n### Social Links\n*You can also connect with me on:*\n- [GitHub Profile](${contact.github})\n- [LinkedIn Profile](${contact.linkedin})\n${contact.twitter ? `- [Twitter/X Profile](${contact.twitter})\n` : ''}`;
+      
+      return createResponse(
+        sendMessageText,
+        <ContactForm />,
+        ['Tell me about yourself', 'Show me your projects', 'What are your technical skills?']
+      );
+    }
+    
+    // For general contact queries, show full contact information
+    const contactText = `## Contact Information\n\nI'd love to connect with you! Here are the best ways to reach me:\n\n### Email\n${contact.email}\n[Send Email](mailto:${contact.email})\n\n### Social Links\n*Connect with me on professional platforms*\n- [GitHub Profile](${contact.github})\n- [LinkedIn Profile](${contact.linkedin})\n${contact.twitter ? `- [Twitter/X Profile](${contact.twitter})\n` : ''}\n### Send a Message Through Form\nYou can also send me a message directly through the contact form on this website. Would you like me to show you the contact form?\n\nFeel free to reach out for opportunities, technical discussions, or just to say hello! 😊`;
+    
     return createResponse(
-      `I'd love to hear from you! Feel free to fill out the form below, and I'll get back to you as soon as possible.`,
-      <ContactForm />,
-      ['Tell me about yourself', 'Show me your projects', 'What are your technical skills?']
+      contactText,
+      undefined,
+      ['Send message', 'Tell me about yourself', 'Show me your projects']
     );
   }
 
