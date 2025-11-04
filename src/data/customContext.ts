@@ -35,5 +35,8 @@ I'm currently learning various AI technologies including:
 - AI agents
 
 If time supports, I'll learn these quickly, otherwise it may take some time, but I'm committed to learning them.
+
+RESUME/CV:
+I have a resume available. When users ask for my resume, CV, or curriculum vitae, provide the resume link from the contact information section. The resume link should be formatted as a clickable button like [View Resume](resume_url).
 `;
 
