@@ -1,8 +1,8 @@
-import { ReactNode } from 'react';
+import { ReactNode } from "react";
 
 export interface Message {
   id: string;
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
   component?: ReactNode;
   suggestions?: string[];
@@ -11,7 +11,7 @@ export interface Message {
 
 export interface Skill {
   name: string;
-  category: 'Frontend' | 'Backend' | 'Database' | 'Tools';
+  category: "Frontend" | "Backend" | "Database" | "Tools";
   icon: string;
 }
 
@@ -23,6 +23,7 @@ export interface Project {
   link?: string;
   github?: string;
   image?: string;
+  icon?: string;
 }
 
 export interface ProjectChallenge {
@@ -77,7 +78,7 @@ export interface Game {
   id: string;
   title: string;
   description: string;
-  category: 'entertainment' | 'educational';
+  category: "entertainment" | "educational";
   icon: string;
 }
 
