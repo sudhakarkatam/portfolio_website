@@ -1,0 +1,59 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "devCommand": "npm run dev",
+  "framework": "vite",
+  "functions": {
+    "api/contact.js": {
+      "runtime": "nodejs18.x"
+    },
+    "api/gemini.js": {
+      "runtime": "nodejs18.x"
+    },
+    "api/openrouter.js": {
+      "runtime": "nodejs18.x"
+    }
+  },
+  "routes": [
+    {
+      "src": "/api/contact",
+      "dest": "/api/contact.js"
+    },
+    {
+      "src": "/api/gemini",
+      "dest": "/api/gemini.js"
+    },
+    {
+      "src": "/api/openrouter",
+      "dest": "/api/openrouter.js"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PUT, DELETE, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization"
+        }
+      ]
+    }
+  ],
+  "env": ["WEB3FORMS_ACCESS_KEY", "GEMINI_API_KEY", "OPENROUTER_API_KEY"]
+}
