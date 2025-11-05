@@ -1,9 +1,11 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  readonly VITE_WEB3FORMS_ACCESS_KEY: string;
-  readonly VITE_GEMINI_API_KEY: string;
-  readonly VITE_OPENROUTER_API_KEY: string;
+  // Client-side environment variables are no longer needed
+  // API keys are now handled securely by server-side API routes
+  readonly MODE: string;
+  readonly DEV: boolean;
+  readonly PROD: boolean;
 }
 
 interface ImportMeta {

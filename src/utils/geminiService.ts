@@ -1,12 +1,22 @@
-import { portfolioData } from '@/data/portfolioData';
-import { gamesData } from '@/data/gamesData';
-import { customContext } from '@/data/customContext';
+import { portfolioData } from "@/data/portfolioData";
+import { gamesData } from "@/data/gamesData";
+import { customContext } from "@/data/customContext";
+import { getApiEndpoint } from "@/utils/platformUtils";
 
 /**
  * Builds a comprehensive context string from portfolio data for Gemini
  */
 export const buildPortfolioContext = (): string => {
-  const { name, title, bio, skills, projects, experience, personalTraits, contact } = portfolioData;
+  const {
+    name,
+    title,
+    bio,
+    skills,
+    projects,
+    experience,
+    personalTraits,
+    contact,
+  } = portfolioData;
 
   let context = `You are an AI assistant representing ${name}, ${title}. Here is comprehensive information about ${name}:\n\n`;
 
@@ -15,16 +25,19 @@ export const buildPortfolioContext = (): string => {
 
   // Skills
   context += `TECHNICAL SKILLS:\n`;
-  const skillsByCategory = skills.reduce((acc, skill) => {
-    if (!acc[skill.category]) acc[skill.category] = [];
-    acc[skill.category].push(skill.name);
-    return acc;
-  }, {} as Record<string, string[]>);
-  
+  const skillsByCategory = skills.reduce(
+    (acc, skill) => {
+      if (!acc[skill.category]) acc[skill.category] = [];
+      acc[skill.category].push(skill.name);
+      return acc;
+    },
+    {} as Record<string, string[]>,
+  );
+
   Object.entries(skillsByCategory).forEach(([category, skillList]) => {
-    context += `- ${category}: ${skillList.join(', ')}\n`;
+    context += `- ${category}: ${skillList.join(", ")}\n`;
   });
-  context += '\n';
+  context += "\n";
 
   // Projects - Enhanced format with all details
   context += `PROJECTS (Total: ${projects.length} projects):\n`;
@@ -33,43 +46,43 @@ export const buildPortfolioContext = (): string => {
     context += `   Category: ${project.category}\n`;
     context += `   Status: ${project.status}\n`;
     context += `   Description: ${project.description}\n`;
-    context += `   Technologies: ${project.technologies.join(', ')}\n`;
+    context += `   Technologies: ${project.technologies.join(", ")}\n`;
     if (project.demoUrl) context += `   Demo URL: ${project.demoUrl}\n`;
     if (project.github) context += `   GitHub URL: ${project.github}\n`;
     if (project.link) context += `   Link URL: ${project.link}\n`;
-    context += `   Features: ${project.features?.join(', ') || 'N/A'}\n`;
+    context += `   Features: ${project.features?.join(", ") || "N/A"}\n`;
     if (project.duration) context += `   Duration: ${project.duration}\n`;
     if (project.teamSize) context += `   Team Size: ${project.teamSize}\n`;
     if (project.role) context += `   Role: ${project.role}\n`;
     if (project.achievements && project.achievements.length > 0) {
-      context += `   Achievements: ${project.achievements.join(', ')}\n`;
+      context += `   Achievements: ${project.achievements.join(", ")}\n`;
     }
     if (project.learnings && project.learnings.length > 0) {
-      context += `   Key Learnings: ${project.learnings.join(', ')}\n`;
+      context += `   Key Learnings: ${project.learnings.join(", ")}\n`;
     }
     if (project.challenges && project.challenges.length > 0) {
-      context += `   Challenges: ${project.challenges.map(c => `${c.title} - ${c.solution}`).join('; ')}\n`;
+      context += `   Challenges: ${project.challenges.map((c) => `${c.title} - ${c.solution}`).join("; ")}\n`;
     }
     if (project.results && project.results.length > 0) {
-      context += `   Results: ${project.results.map(r => `${r.value} ${r.metric}`).join(', ')}\n`;
+      context += `   Results: ${project.results.map((r) => `${r.value} ${r.metric}`).join(", ")}\n`;
     }
   });
-  context += '\n';
+  context += "\n";
 
   // Experience
   context += `EXPERIENCE & EDUCATION:\n`;
   experience.forEach((exp) => {
     context += `- ${exp.role} at ${exp.company}\n`;
     context += `  Period: ${exp.period}\n`;
-    context += `  Status: ${exp.current ? 'Currently in progress' : 'Completed'}\n`;
+    context += `  Status: ${exp.current ? "Currently in progress" : "Completed"}\n`;
     context += `  Description: ${exp.description}\n`;
     if (exp.achievements && exp.achievements.length > 0) {
-      context += `  Achievements (use EXACT wording, do not rephrase): ${exp.achievements.join(', ')}\n`;
+      context += `  Achievements (use EXACT wording, do not rephrase): ${exp.achievements.join(", ")}\n`;
     }
     if (exp.technologies && exp.technologies.length > 0) {
-      context += `  Technologies: ${exp.technologies.join(', ')}\n`;
+      context += `  Technologies: ${exp.technologies.join(", ")}\n`;
     }
-    context += '\n';
+    context += "\n";
   });
   context += `\nIMPORTANT - Understanding Education/Experience Status:\n`;
   context += `- If period shows "Start Date - End Date" format (e.g., "August 2021 - May 2025"), it means COMPLETED\n`;
@@ -83,15 +96,15 @@ export const buildPortfolioContext = (): string => {
   if (personalTraits) {
     context += `PERSONAL TRAITS:\n`;
     if (personalTraits.strengths && personalTraits.strengths.length > 0) {
-      context += `Strengths: ${personalTraits.strengths.join(', ')}\n`;
+      context += `Strengths: ${personalTraits.strengths.join(", ")}\n`;
     }
     if (personalTraits.weaknesses && personalTraits.weaknesses.length > 0) {
-      context += `Areas for Growth: ${personalTraits.weaknesses.join(', ')}\n`;
+      context += `Areas for Growth: ${personalTraits.weaknesses.join(", ")}\n`;
     }
     if (personalTraits.hobbies && personalTraits.hobbies.length > 0) {
-      context += `Hobbies & Interests: ${personalTraits.hobbies.join(', ')}\n`;
+      context += `Hobbies & Interests: ${personalTraits.hobbies.join(", ")}\n`;
     }
-    context += '\n';
+    context += "\n";
   }
 
   // Contact
@@ -113,7 +126,7 @@ export const buildPortfolioContext = (): string => {
   context += `- Then include social links section: "You can also connect with me on:" followed by:\n`;
   context += `  - [GitHub Profile](${contact.github})\n`;
   context += `  - [LinkedIn Profile](${contact.linkedin})\n`;
-  context += `  ${contact.twitter ? `  - [Twitter/X Profile](${contact.twitter})\n` : ''}`;
+  context += `  ${contact.twitter ? `  - [Twitter/X Profile](${contact.twitter})\n` : ""}`;
   context += `- The contact form will be displayed automatically\n`;
   context += `- Keep it concise but include social links\n\n`;
   context += `**When user asks about "contact", "contact information", "email", "how to reach", "connect", etc.:**\n`;
@@ -122,7 +135,7 @@ export const buildPortfolioContext = (): string => {
   context += `  - Social Links section: Add small descriptive text like "*Connect with me on professional platforms*" right after the heading, then list:\n`;
   context += `    - [GitHub Profile](${contact.github})\n`;
   context += `    - [LinkedIn Profile](${contact.linkedin})\n`;
-  context += `    ${contact.twitter ? `- [Twitter/X Profile](${contact.twitter})\n` : ''}`;
+  context += `    ${contact.twitter ? `- [Twitter/X Profile](${contact.twitter})\n` : ""}`;
   context += `- Then, mention the contact form as an option: "You can also send me a message directly through the contact form on this website. Would you like me to show you the contact form?"\n`;
   context += `- Be comprehensive about all contact methods first, then offer the form\n`;
   context += `- Use a friendly, professional tone\n`;
@@ -137,7 +150,7 @@ export const buildPortfolioContext = (): string => {
     context += `   Category: ${game.category}\n`;
     context += `   Description: ${game.description}\n`;
     context += `   ID: ${game.id}\n`;
-    context += '\n';
+    context += "\n";
   });
   context += `\nCHAT GAMES (Available in AI Mode):\n`;
   context += `There are also 2 mini-games that can be played directly in the chat:\n`;
@@ -273,16 +286,16 @@ export const buildPortfolioContext = (): string => {
   context += `### Brief Summaries:\n\n`;
   context += `**1. Personal Tracker Application**\n`;
   context += `An offline-first Android app for habit tracking, task management, and wellness monitoring. Built with React, TypeScript, and Capacitor.\n`;
-  context += `- [View Demo](${projects.find(p => p.id === '1')?.demoUrl || 'https://personal-tracker.vercel.app'})\n`;
-  context += `- [GitHub](${projects.find(p => p.id === '1')?.github || 'https://github.com/sudhakarkatam/tracker22'})\n\n`;
+  context += `- [View Demo](${projects.find((p) => p.id === "1")?.demoUrl || "https://personal-tracker.vercel.app"})\n`;
+  context += `- [GitHub](${projects.find((p) => p.id === "1")?.github || "https://github.com/sudhakarkatam/tracker22"})\n\n`;
   context += `**2. Financial Calculators App**\n`;
   context += `A PWA with multiple financial calculators (SIP, SWP, EMI, etc.) with interactive charts. Built with React, TypeScript, and Chart.js.\n`;
-  context += `- [View Demo](${projects.find(p => p.id === '2')?.demoUrl || 'https://finance-calculators.vercel.app'})\n`;
-  context += `- [GitHub](${projects.find(p => p.id === '2')?.github || 'https://github.com/sudhakarkatam/finance_cal'})\n\n`;
+  context += `- [View Demo](${projects.find((p) => p.id === "2")?.demoUrl || "https://finance-calculators.vercel.app"})\n`;
+  context += `- [GitHub](${projects.find((p) => p.id === "2")?.github || "https://github.com/sudhakarkatam/finance_cal"})\n\n`;
   context += `**3. Ecommerce product recommendation**\n`;
   context += `An ecommerce platform with product catalog and admin dashboard. Built with Next.js, TypeScript, and Supabase.\n`;
-  context += `- [View Demo](${projects.find(p => p.id === '3')?.demoUrl || 'https://purevaluepicks.com'})\n`;
-  context += `- [GitHub](${projects.find(p => p.id === '3')?.github || projects.find(p => p.id === '3')?.link || ''})\n\n`;
+  context += `- [View Demo](${projects.find((p) => p.id === "3")?.demoUrl || "https://purevaluepicks.com"})\n`;
+  context += `- [GitHub](${projects.find((p) => p.id === "3")?.github || projects.find((p) => p.id === "3")?.link || ""})\n\n`;
   context += `*[Continue with all projects...]*\n\n`;
   context += `Would you like more details about any specific project?\n\n`;
   context += `**Example - Detailed Project Response:**\n`;
@@ -346,8 +359,8 @@ export const buildPortfolioContext = (): string => {
 };
 
 // Store the model information
-let currentModel = 'gemini-2.5-flash-preview-05-20';
-let currentApiVersion = 'v1beta';
+let currentModel = "gemini-2.5-flash";
+let currentApiVersion = "v1beta";
 
 /**
  * Sets the model to use
@@ -360,91 +373,83 @@ export const setModel = (model: string, apiVersion: string) => {
 /**
  * Gets the last successfully used model information
  */
-export const getLastUsedModel = () => ({ model: currentModel, apiVersion: currentApiVersion });
+export const getLastUsedModel = () => ({
+  model: currentModel,
+  apiVersion: currentApiVersion,
+});
 
 /**
  * Generates a response using Gemini API based on portfolio data
  */
 export const generateGeminiResponse = async (
   userQuery: string,
-  conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = [],
+  conversationHistory: Array<{
+    role: "user" | "assistant";
+    content: string;
+  }> = [],
   modelName?: string,
-  apiVersion?: string
+  apiVersion?: string,
 ): Promise<string> => {
   const model = modelName || currentModel;
   const apiVer = apiVersion || currentApiVersion;
-  
+
   // Update current model
   setModel(model, apiVer);
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-  
-  if (!apiKey) {
-    throw new Error('Gemini API key is not configured. Please set VITE_GEMINI_API_KEY in your environment variables.');
-  }
+  // API key is now handled securely by the Netlify Function
 
   const context = buildPortfolioContext();
 
   // Build conversation history for context (increase to 10 messages for better context)
-  let conversationContext = '';
+  let conversationContext = "";
   if (conversationHistory.length > 0) {
-    conversationContext = '\n\n--- CONVERSATION HISTORY (for context) ---\n';
+    conversationContext = "\n\n--- CONVERSATION HISTORY (for context) ---\n";
     conversationHistory.slice(-10).forEach((msg, index) => {
-      conversationContext += `${msg.role === 'user' ? '👤 User' : '🤖 Assistant'}: ${msg.content}\n\n`;
+      conversationContext += `${msg.role === "user" ? "👤 User" : "🤖 Assistant"}: ${msg.content}\n\n`;
     });
-    conversationContext += '--- END CONVERSATION HISTORY ---\n';
+    conversationContext += "--- END CONVERSATION HISTORY ---\n";
   }
 
   const prompt = `${context}${conversationContext}\n\n--- CURRENT USER QUESTION ---\n${userQuery}\n\n--- YOUR RESPONSE ---\nProvide a helpful, detailed, and engaging response based on the portfolio information above. Use the conversation history to maintain context if relevant.`;
 
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/${apiVer}/models/${model}:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  text: prompt,
-                },
-              ],
-            },
-          ],
-          generationConfig: {
-            temperature: 0.8, // Slightly higher for more creative/engaging responses
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 2048, // Increased for more detailed responses
-          },
-        }),
-      }
-    );
+    // Get secure API endpoint based on deployment platform
+    const endpoint = getApiEndpoint("gemini");
+
+    // Use secure function instead of direct API call
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        prompt: prompt,
+        model: model,
+        apiVersion: apiVer,
+        temperature: 0.8,
+        maxTokens: 2048,
+      }),
+    });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(
-        `Gemini API error: ${response.status} ${response.statusText}. ${JSON.stringify(errorData)}`
+        `Gemini API error: ${response.status} ${response.statusText}. ${errorData.error || JSON.stringify(errorData)}`,
       );
     }
 
     const data = await response.json();
 
-    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
-      throw new Error('Invalid response format from Gemini API');
+    if (!data.success || !data.response) {
+      throw new Error("Invalid response format from Gemini API");
     }
 
-    const generatedText = data.candidates[0].content.parts[0].text;
-    
-    console.log(`✅ Successfully using Gemini model: ${model} (API version: ${apiVer})`);
-    
-    return generatedText.trim();
+    console.log(
+      `✅ Successfully using Gemini model: ${model} (API version: ${apiVer})`,
+    );
+
+    return data.response.trim();
   } catch (error) {
-    console.error('Error calling Gemini API:', error);
+    console.error("Error calling Gemini API:", error);
     throw error;
   }
 };
-
