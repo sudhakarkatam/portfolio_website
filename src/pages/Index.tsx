@@ -132,18 +132,40 @@ const Index = () => {
         setIsTyping(false);
         setStreamingMessageId(streamingId);
 
-        // Check if this is a "send message" query (different from "contact")
-        const isSendMessageQuery =
+        // Enhanced contact form detection - matches AI context
+        const isContactFormQuery =
+          messageText.toLowerCase().includes("contact form") ||
+          messageText.toLowerCase().includes("message form") ||
           messageText.toLowerCase().includes("send message") ||
-          messageText.toLowerCase().includes("send a message");
+          messageText.toLowerCase().includes("send you a message") ||
+          messageText.toLowerCase().includes("write to you") ||
+          messageText.toLowerCase().includes("message you") ||
+          messageText.toLowerCase().includes("reach out to you") ||
+          messageText.toLowerCase().includes("get in touch with you") ||
+          (messageText.toLowerCase().includes("form") &&
+            (messageText.toLowerCase().includes("contact") ||
+              messageText.toLowerCase().includes("message"))) ||
+          (messageText.toLowerCase().includes("how") &&
+            (messageText.toLowerCase().includes("contact") ||
+              messageText.toLowerCase().includes("message"))) ||
+          messageText.toLowerCase().includes("want to contact") ||
+          messageText.toLowerCase().includes("need to contact") ||
+          messageText.toLowerCase().includes("like to message") ||
+          messageText.toLowerCase().includes("want to message") ||
+          messageText.toLowerCase().includes("show me the form") ||
+          messageText.toLowerCase().includes("contact you");
 
-        // Check if this is a general contact query (email, contact, reach, connect)
-        const isContactQuery =
-          !isSendMessageQuery &&
-          (messageText.toLowerCase().includes("contact") ||
-            messageText.toLowerCase().includes("email") ||
-            messageText.toLowerCase().includes("reach") ||
-            messageText.toLowerCase().includes("connect"));
+        // General contact info queries (without form)
+        const isContactInfoQuery =
+          !isContactFormQuery &&
+          (messageText.toLowerCase().includes("contact information") ||
+            messageText.toLowerCase().includes("contact details") ||
+            messageText.toLowerCase().includes("email address") ||
+            messageText.toLowerCase().includes("social media") ||
+            messageText.toLowerCase().includes("linkedin") ||
+            messageText.toLowerCase().includes("github profile") ||
+            messageText.toLowerCase().includes("social links") ||
+            messageText.toLowerCase().includes("contact"));
 
         // Check for chat games (dice roll and coin toss) - be more specific
         const lowerQuery = messageText.toLowerCase();
@@ -176,8 +198,15 @@ const Index = () => {
             clearInterval(streamInterval);
             setStreamingMessageId(null);
 
-            // If it's a "send message" query, always show the ContactForm component
-            if (isSendMessageQuery) {
+            // Debug logging for contact form detection
+            console.log("Contact form query detection:", {
+              messageText: messageText,
+              isContactFormQuery: isContactFormQuery,
+              isContactInfoQuery: isContactInfoQuery,
+            });
+
+            // If it's a contact form query, show the ContactForm component
+            if (isContactFormQuery) {
               setMessages((prev) =>
                 prev.map((msg) =>
                   msg.id === streamingId
