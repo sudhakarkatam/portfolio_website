@@ -233,7 +233,7 @@ export const generateResponse = (
     );
   }
 
-  // Skills responses - more natural
+  // Skills responses - more natural and conversational
   if (
     lowercaseQuery.includes("skill") ||
     lowercaseQuery.includes("technolog") ||
@@ -241,12 +241,12 @@ export const generateResponse = (
     lowercaseQuery.includes("stack")
   ) {
     return createResponse(
-      "Great question! I work with a variety of technologies. Here's a breakdown of my technical skills:",
-      <SkillsVisualization skills={portfolioData.skills} />,
+      "I have a solid foundation across the **full stack**!\n\nFor **Frontend**, I work with React, JavaScript & TypeScript, HTML5/CSS3, and Redux. On the **Backend**, I'm comfortable with Java, Node.js, Python, and Spring Boot.\n\nFor **databases**, I use PostgreSQL, MySQL, Supabase, and Firebase. My go-to **tools** include Git & GitHub, Docker, AWS, VS Code, and various AI tools.\n\n*I love being a full-stack developer because it gives me the complete picture!* 🚀\n\nWant to see these skills in action through my projects?",
+      undefined,
       [
         "Show me your projects",
+        "Which framework do you prefer?",
         "Tell me about your experience",
-        "What are your strengths?",
       ],
     );
   }
@@ -362,18 +362,13 @@ export const generateResponse = (
 
     // For contact form requests - show the form directly
     if (isContactFormQuery) {
-      const contactFormText = `## 📧 **Send Me a Message**
+      const contactFormText = `I'd **love to hear from you!** The contact form is right below - just fill out your name, email, and message, and I'll get back to you soon.
 
-I'd **love to hear from you!** Fill out the form below to send me a message, and I'll get back to you as soon as possible.
-
-### **Social Links**
-*You can also connect with me on:*
-- 🐙 **[GitHub Profile](${contact.github})** - Check out my code and projects
-- 💼 **[LinkedIn Profile](${contact.linkedin})** - Professional networking
-${contact.twitter ? `- 🐦 **[Twitter/X Profile](${contact.twitter})** - Follow for tech updates\n` : ""}
----
-
-**The contact form includes fields for your name, email, and message.** Just fill it out below and hit send! ⬇️`;
+**You can also connect with me on:**
+- 🐙 **[GitHub Profile](${contact.github})**
+- 💼 **[LinkedIn Profile](${contact.linkedin})**
+${contact.twitter ? `- 🐦 **[Twitter/X Profile](${contact.twitter})**\n` : ""}
+The form will appear below this message automatically! ⬇️`;
 
       return createResponse(contactFormText, <ContactForm />, [
         "Tell me about yourself",
@@ -410,6 +405,188 @@ Want to **send me a message** directly? I have a contact form right here on the 
       "Tell me about yourself",
       "Show me your projects",
     ]);
+  }
+
+  // Enhanced question pattern recognition
+  const patterns = {
+    framework:
+      /framework|react|angular|vue|next\.?js|tech stack|development tools|prefer.*code|what.*use.*dev/i,
+    frontendBackend:
+      /frontend.*backend|backend.*frontend|full.?stack|type.*developer|specializ/i,
+    ide: /ide|editor|vs.?code|vim|atom|sublime|development environment/i,
+    hometown:
+      /hometown|where.*from|background|village|rural|andhra|prakasam|kothapalem/i,
+    gaming: /games?|gaming|play|mobile.*game|freefire|free.*fire/i,
+    food: /food|eat|favorite.*dish|cuisine|biryani|cook/i,
+    friends: /friends?|buddies|college.*friends?|social.*circle|eshwar|pavan/i,
+    motivation: /motivat|drives?.*you|what.*keeps.*going|passion|curious/i,
+    values: /values?|philosophy|principles|matter.*you|important|belief/i,
+    technology:
+      /tech.*excit|future.*tech|AI|IoT|blockchain|innovation|emerging/i,
+    exercise: /exercise|fitness|workout|gym|physical|health/i,
+    sleep: /morning.*person|night.*owl|sleep|wake.*up|schedule/i,
+    languages: /language|speak|telugu|english|hindi|native/i,
+    hobbies:
+      /hobbies|interests|free.*time|activities|cricket|volleyball|badminton|content.*creation/i,
+    birthday: /birthday|birth.*date|when.*born|age|february|feb.*4/i,
+  };
+
+  // Check for specific pattern matches
+  for (const [category, pattern] of Object.entries(patterns)) {
+    if (pattern.test(query)) {
+      switch (category) {
+        case "framework":
+          return createResponse(
+            `For web development, I absolutely **love React with TypeScript** - it's my go-to combination! I also work with **Next.js** for full-stack applications.\n\n*Also, I prefer being a full-stack developer working with both frontend, backend, AND cloud technologies.* ☁️`,
+            undefined,
+            [
+              "What IDE do you use?",
+              "Show me your projects",
+              "Tell me about your experience",
+            ],
+          );
+        case "frontendBackend":
+          return createResponse(
+            `I prefer **both frontend and backend** - I'm a full-stack developer! Plus I'm really interested in **cloud technologies** too.\n\n*I believe understanding the complete development cycle makes you a better developer.* 🚀`,
+            undefined,
+            [
+              "Which framework do you prefer?",
+              "Show me your projects",
+              "What are your technical skills?",
+            ],
+          );
+        case "ide":
+          return createResponse(
+            `I mostly use **VS Code** - it's fantastic for development! But I'm always exploring different editors and I really want to **learn Vim editor** too.\n\n*Always curious about new tools that can make development more efficient!* ⚡`,
+            undefined,
+            [
+              "Which framework do you prefer?",
+              "Tell me about your projects",
+              "What motivates you?",
+            ],
+          );
+        case "hometown":
+          return createResponse(
+            `I'm **22 years old** and from **Kothapalem village** in Talluru Mandal, Prakasam District, Andhra Pradesh. The nearest towns are Darsi, Addanki, and Ongole.\n\n*I love my hometown like everyone does!* 🌾\n\nWant to know more about my village life or hear about my favorite Telugu traditions?`,
+            undefined,
+            [
+              "Tell me about your family background",
+              "What are your favorite traditions?",
+              "Do you miss your hometown?",
+            ],
+          );
+        case "gaming":
+          return createResponse(
+            `I used to play **FreeFire** on mobile, but now I'm not playing much because I'm focused on **learning technologies and building apps**.\n\n*These days, coding feels more exciting than gaming!* 💻`,
+            undefined,
+            [
+              "What do you do in your free time?",
+              "Are you a morning person?",
+              "Tell me about your interests",
+            ],
+          );
+        case "food":
+          return createResponse(
+            `Oh, I **love biryani** and any chicken recipe! Also enjoy **dosa, idly, and chapathi**. For sweets, **bread halwa** is my absolute favorite! 🍛\n\n*I can manage basic cooking but wouldn't call myself a proficient chef.* 😅\n\nCurious about my other hobbies or want to know what languages I speak?`,
+            undefined,
+            [
+              "What languages do you speak?",
+              "Tell me about your hobbies",
+              "Do you exercise?",
+            ],
+          );
+        case "friends":
+          return createResponse(
+            `I have some amazing friends! In college, there's **Eshwar** - he's from Hyderabad, really good and nice person, always there for me. We call him "bhai" sometimes for fun! And **Pavan** - he's a true techie from Vijayawada, great at technology.\n\n*When we three (Eshwar, Pavan, and me) meet, it's pure fun - no tensions, just desi-style enjoyment with random topics and lots of jokes!* 😄\n\n*I also have some great hometown friends...* Want to know more about my college days or hear about my hometown friends?`,
+            undefined,
+            [
+              "Tell me about your hometown friends",
+              "How was college with them?",
+              "What do you value in friends?",
+            ],
+          );
+        case "motivation":
+          return createResponse(
+            `I'm driven by a constant desire to **learn new things and explore new ways** of doing things. I'm a **curious person** who wants to understand how everything works!\n\n*That curiosity is what fuels my passion for technology and coding.* 🔍\n\nWant to hear about my core values or curious about my dream projects?`,
+            undefined,
+            [
+              "What are your core values?",
+              "Tell me about your dream projects",
+              "What excites you about technology?",
+            ],
+          );
+        case "values":
+          return createResponse(
+            `My core values are **patience, honesty, integrity**, and having the right intention. I have a growing interest in **philosophy** and I'm slowly adapting to reading books.\n\n*Whatever I do, I want my family to be happy always. Family happiness is my priority.* ❤️\n\nWant to know about my life motto or curious about my family background?`,
+            undefined,
+            [
+              "What's your life motto?",
+              "Tell me about your family",
+              "When is your birthday?",
+            ],
+          );
+        case "technology":
+          return createResponse(
+            `**Everything** excites me about technology! AI, IoT, smart things, blockchain, and all new technologies - not only in software but also in **hardware and arts**!\n\n*I always love teaching too. Maybe I'll start a startup around education or tech in the future.* 🚀\n\nWant to see my technical skills or curious about my current projects?`,
+            undefined,
+            [
+              "What are your technical skills?",
+              "Show me your projects",
+              "Tell me about your dream projects",
+            ],
+          );
+        case "exercise":
+          return createResponse(
+            `Yes, I exercise **a little bit** and try to stay active! 💪\n\n*It's important to balance coding with some physical activity, right?*`,
+            undefined,
+            [
+              "Are you a morning person?",
+              "What's your favorite food?",
+              "What do you do in free time?",
+            ],
+          );
+        case "sleep":
+          return createResponse(
+            `I'm naturally a **night owl**, but I'm slowly trying to become a **morning person** - let's see how it goes! 🌙➡️🌅\n\n*Old habits die hard, but I'm working on it!*\n\nCurious about my other lifestyle habits or want to know what I do for exercise?`,
+            undefined,
+            [
+              "Do you exercise?",
+              "What do you do in free time?",
+              "Tell me about your hobbies",
+            ],
+          );
+        case "languages":
+          return createResponse(
+            `I speak **three languages**! **Telugu** is my native language, I'm **proficient in English**, and I have **intermediate proficiency in Hindi**.\n\n*Growing up in Andhra Pradesh, Telugu comes naturally to me!* 🗣️\n\nWant to know more about my cultural connections or curious about my hobbies?`,
+            undefined,
+            [
+              "What are your favorite traditions?",
+              "Tell me about your hobbies",
+              "Do you miss your hometown?",
+            ],
+          );
+        case "hobbies":
+          return createResponse(
+            `When I'm not coding, I love staying active and exploring! I enjoy playing **outdoor games like cricket, volleyball, and badminton**. I also spend time **reading tech blogs**, contributing to **open-source projects**, and even dabble in **content creation** on Instagram and YouTube!\n\n*Always coding side projects and exploring new technologies too!* 🏃‍♂️\n\nCurious about my gaming habits or want to know about my content creation?`,
+            undefined,
+            [
+              "Do you play video games?",
+              "Tell me about content creation",
+              "What outdoor games do you play?",
+            ],
+          );
+        case "birthday":
+          return createResponse(
+            `My birthday is on **February 4th**! 🎂\n\n*Just turned 22 this year!* 🎉\n\nWant to know more about my personal life or curious about my college friends?`,
+            undefined,
+            [
+              "Tell me about your friends",
+              "How was your college experience?",
+              "What are your hobbies?",
+            ],
+          );
+      }
+    }
   }
 
   // Default response - enhanced with better formatting and contact option
