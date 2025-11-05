@@ -8,7 +8,8 @@
     "dev:client": "vite",
     "dev:api": "node dev-server.cjs",
     "dev:vite": "vite",
-    "build": "vite build",
+    "build": "tsc && vite build",
+    "build:netlify": "npm run build",
     "lint": "eslint .",
     "preview": "vite preview"
   },

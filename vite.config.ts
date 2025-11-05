@@ -41,8 +41,13 @@ export default defineConfig({
     assetsDir: "assets",
     sourcemap: false,
     minify: "esbuild",
+    target: "es2020",
     rollupOptions: {
       output: {
+        format: "es",
+        entryFileNames: "assets/[name].[hash].js",
+        chunkFileNames: "assets/[name].[hash].js",
+        assetFileNames: "assets/[name].[hash].[ext]",
         manualChunks: {
           vendor: ["react", "react-dom"],
           ui: [
