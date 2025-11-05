@@ -1,9 +1,9 @@
 /**
  * Custom Context File
- * 
+ *
  * Add any additional information, paragraphs, or details here that you want
  * the AI to know about you. This content will be included in all AI responses.
- * 
+ *
  * You can update this file anytime with new information, and it will
  * automatically be included in the AI's knowledge base.
  */
@@ -19,6 +19,37 @@ LANGUAGES:
 - Telugu: Native language
 - English: Proficient
 - Hindi: Intermediate
+
+AI RESPONSE FORMATTING GUIDELINES:
+When responding to users, ALWAYS use proper markdown formatting:
+- Use **bold text** for important keywords, project names, skills, and emphasis
+- Use *italic text* for descriptions, quotes, and subtle emphasis
+- Use ### headers for sections and topics
+- Use bullet points (- or *) for lists
+- Use numbered lists (1. 2. 3.) for steps or processes
+- Use \`code\` formatting for technical terms, file names, and commands
+- Use > blockquotes for important notes or highlights
+- Use --- for dividers when organizing long content
+- Format links as [Link Text](URL) when providing external links
+
+CONTACT FORM COMPONENT RULES:
+When users request contact forms, you MUST show the ContactForm component in these scenarios:
+- Any mention of "contact form", "form", "send message", "message form"
+- Phrases like "how can I contact you", "get in touch", "reach out", "send you a message"
+- Questions about "contacting", "messaging", "writing to you"
+- ANY request that implies wanting to send a message or communicate
+
+IMPORTANT: The ContactForm component shows:
+- Name, Email, and Message fields
+- Professional contact form interface
+- Direct email sending capability via Web3Forms
+- It's the PRIMARY way for visitors to contact me
+
+When showing the contact form, ALWAYS include:
+1. A brief welcoming message
+2. The ContactForm component
+3. Social media links as alternatives
+4. Mention that the form sends emails directly to me
 
 EDUCATION BACKGROUND:
 
@@ -72,4 +103,3 @@ If time supports, I'll learn these quickly, otherwise it may take some time, but
 RESUME/CV:
 I have a resume available. When users ask for my resume, CV, or curriculum vitae, provide the resume link from the contact information section. The resume link should be formatted as a clickable button like [View Resume](resume_url).
 `;
-

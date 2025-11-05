@@ -409,7 +409,31 @@ export const generateGeminiResponse = async (
     conversationContext += "--- END CONVERSATION HISTORY ---\n";
   }
 
-  const prompt = `${context}${conversationContext}\n\n--- CURRENT USER QUESTION ---\n${userQuery}\n\n--- YOUR RESPONSE ---\nProvide a helpful, detailed, and engaging response based on the portfolio information above. Use the conversation history to maintain context if relevant.`;
+  const prompt = `${context}${conversationContext}
+
+RESPONSE FORMATTING REQUIREMENTS:
+- Use **bold text** for important keywords, names, skills, and emphasis
+- Use *italic text* for descriptions and subtle emphasis
+- Use ### for section headers
+- Use bullet points (-) and numbered lists (1. 2. 3.)
+- Use \`code\` formatting for technical terms
+- Use > blockquotes for important notes
+- Format links as [Link Text](URL)
+- Be conversational but professional
+- When users ask about contact forms, forms, messaging, or getting in touch, ALWAYS recommend showing the contact form component
+
+CONTACT FORM COMPONENT INSTRUCTIONS:
+- If user asks about "contact form", "form", "send message", "message you", "get in touch", "reach out", or similar queries
+- Respond enthusiastically about the contact form being available
+- Mention that it sends emails directly and has name, email, and message fields
+- Include social media links as alternatives
+- The contact form component will be shown automatically based on your response
+
+--- CURRENT USER QUESTION ---
+${userQuery}
+
+--- YOUR RESPONSE ---
+Provide a helpful, detailed, and engaging response with proper markdown formatting based on the portfolio information above. Use the conversation history to maintain context if relevant. If the user is asking about contact/messaging, be sure to mention the availability of the contact form.`;
 
   try {
     // Get secure API endpoint based on deployment platform
