@@ -1,12 +1,24 @@
 /**
  * Platform detection utilities for serverless deployments
  * Supports both Netlify Functions and Vercel API Routes for maximum deployment flexibility
+ * Fixed to properly detect Netlify deployments even with custom domains
  */
 
 export type DeploymentPlatform = "netlify" | "vercel" | "local";
 
+// Extend Window interface for platform-specific globals
+declare global {
+  interface Window {
+    __NETLIFY__?: boolean;
+    __VERCEL__?: boolean;
+    netlifyIdentity?: unknown;
+    checkPlatform?: () => unknown;
+  }
+}
+
 /**
  * Detects the current deployment platform
+ * Enhanced to support custom domains on Netlify
  */
 export function detectPlatform(): DeploymentPlatform {
   if (typeof window === "undefined") {
@@ -22,25 +34,46 @@ export function detectPlatform(): DeploymentPlatform {
     return "local";
   }
 
-  // Client-side - check hostname and URL patterns
+  // Client-side detection
   const hostname = window.location.hostname;
   const url = window.location.href;
 
-  // Netlify detection
-  if (
+  // Check for build-time environment variable (most reliable for custom domains)
+  if (import.meta.env.VITE_DEPLOYMENT_PLATFORM === "netlify") {
+    return "netlify";
+  }
+  if (import.meta.env.VITE_DEPLOYMENT_PLATFORM === "vercel") {
+    return "vercel";
+  }
+
+  // Netlify detection - multiple methods for reliability
+  const isNetlify =
+    // Standard Netlify domains
     hostname.includes("netlify.app") ||
     hostname.includes("netlify.com") ||
-    url.includes("/.netlify/functions/")
-  ) {
+    // Check if Netlify functions path is being used
+    url.includes("/.netlify/functions/") ||
+    // Check for Netlify-injected indicators
+    window.__NETLIFY__ === true ||
+    // Check for Netlify deployment meta tag
+    document.querySelector('meta[name="netlify"]') !== null ||
+    // Check for Netlify-specific global
+    window.netlifyIdentity !== undefined;
+
+  if (isNetlify) {
     return "netlify";
   }
 
   // Vercel detection
-  if (hostname.includes("vercel.app") || hostname.includes("vercel.com")) {
+  if (
+    hostname.includes("vercel.app") ||
+    hostname.includes("vercel.com") ||
+    window.__VERCEL__ === true
+  ) {
     return "vercel";
   }
 
-  // Local development detection - but check if dev server is running
+  // Local development detection
   if (
     hostname === "localhost" ||
     hostname === "127.0.0.1" ||
@@ -51,8 +84,10 @@ export function detectPlatform(): DeploymentPlatform {
     return "local";
   }
 
-  // Default to Vercel (Next.js API routes work everywhere)
-  return "vercel";
+  // For custom domains where we can't detect the platform:
+  // Default to Netlify since that's the primary deployment target
+  // The redirect rules in netlify.toml will ensure /api/* works correctly
+  return "netlify";
 }
 
 /**
@@ -70,6 +105,8 @@ export function getApiEndpoint(functionName: string): string {
 
   switch (platform) {
     case "netlify":
+      // On Netlify, always use /.netlify/functions/
+      // The redirect rules in netlify.toml will also make /api/* work
       return `/.netlify/functions/${functionName}`;
     case "vercel":
       return `/api/${functionName}`;
@@ -165,6 +202,7 @@ export function getPlatformDebugInfo() {
     timeout: getApiTimeout(),
     hostname:
       typeof window !== "undefined" ? window.location.hostname : "server-side",
+    url: typeof window !== "undefined" ? window.location.href : "server-side",
     userAgent:
       typeof window !== "undefined" ? navigator.userAgent : "server-side",
     environmentVars: {
@@ -173,7 +211,21 @@ export function getPlatformDebugInfo() {
       VERCEL: (typeof process !== "undefined" && process.env?.VERCEL) || false,
       NODE_ENV:
         (typeof process !== "undefined" && process.env?.NODE_ENV) || "unknown",
+      VITE_DEPLOYMENT_PLATFORM:
+        import.meta.env.VITE_DEPLOYMENT_PLATFORM || "not set",
     },
+    detectionChecks:
+      typeof window !== "undefined"
+        ? {
+            hasNetlifyHostname: window.location.hostname.includes("netlify"),
+            hasVercelHostname: window.location.hostname.includes("vercel"),
+            hasNetlifyGlobal: window.__NETLIFY__ === true,
+            hasNetlifyIdentity: window.netlifyIdentity !== undefined,
+            hasNetlifyMeta:
+              document.querySelector('meta[name="netlify"]') !== null,
+            isLocalhost: window.location.hostname === "localhost",
+          }
+        : {},
     timestamp: new Date().toISOString(),
   };
 }
@@ -240,6 +292,19 @@ export function validatePlatformSetup(): {
     }
   }
 
+  // Client-side validation
+  if (typeof window !== "undefined") {
+    if (platform === "netlify") {
+      // Try to validate that Netlify functions are accessible
+      const endpoints = getApiEndpoints();
+      if (!endpoints.gemini.includes("/.netlify/functions/")) {
+        errors.push(
+          "Netlify platform detected but endpoint doesn't use Netlify functions path",
+        );
+      }
+    }
+  }
+
   return {
     isValid: errors.length === 0,
     platform,
@@ -284,4 +349,23 @@ export function getRecommendedPlatform(): {
   reasons.push("Better TypeScript integration with Next.js");
 
   return { platform: "vercel", reasons };
+}
+
+/**
+ * Debug helper - Call this in browser console to check platform detection
+ * Usage: window.checkPlatform()
+ */
+if (typeof window !== "undefined") {
+  window.checkPlatform = () => {
+    const info = getPlatformDebugInfo();
+    console.log("=== Platform Detection Debug Info ===");
+    console.log("Detected Platform:", info.platform);
+    console.log("Hostname:", info.hostname);
+    console.log("URL:", info.url);
+    console.log("Endpoints:", info.endpoints);
+    console.log("Detection Checks:", info.detectionChecks);
+    console.log("Environment Variables:", info.environmentVars);
+    console.log("====================================");
+    return info;
+  };
 }

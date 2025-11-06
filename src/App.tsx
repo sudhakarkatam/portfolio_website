@@ -7,6 +7,11 @@ import Index from "./pages/Index";
 import Portfolio from "./pages/Portfolio";
 import NotFound from "./pages/NotFound";
 
+// Import platform test utilities in development
+if (import.meta.env.DEV) {
+  import("./utils/testPlatformDetection");
+}
+
 const queryClient = new QueryClient();
 
 const App = () => (
