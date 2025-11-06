@@ -1,3 +1,6 @@
+###############################
+# Build Settings
+###############################
 [build]
   publish = "dist"
   command = "npm run build"
@@ -5,6 +8,27 @@
 [build.environment]
   NODE_VERSION = "18"
 
+###############################
+# API Redirects (MUST be above SPA rule)
+###############################
+# Forward /api/* to Netlify Functions
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+  force = true
+
+###############################
+# SPA Fallback
+###############################
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+###############################
+# Headers (safe & optimized)
+###############################
 [[headers]]
   for = "/*"
   [headers.values]
@@ -48,10 +72,8 @@
   [headers.values]
     Content-Type = "text/css; charset=utf-8"
 
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-
+###############################
+# Functions Directory
+###############################
 [functions]
   directory = "netlify/functions"
