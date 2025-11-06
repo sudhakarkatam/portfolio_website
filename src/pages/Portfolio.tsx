@@ -553,6 +553,16 @@ const Portfolio = () => {
                     )}
                   </div>
                 </div>
+                                {/* Tags */}
+                                {project.tags && project.tags.length > 0 && (
+                  <div className="flex gap-2 mb-3">
+                    {project.tags.map((tag, index) => (
+                      <Badge key={index} className="bg-green-100 text-green-800 border-green-200 text-xs">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
                 <p className="text-sm sm:text-base text-muted-foreground leading-relaxed mb-3 sm:mb-4">
                   {project.description}
                 </p>

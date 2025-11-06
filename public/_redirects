@@ -8,5 +8,5 @@
 /icon-512.svg   /icon-512.svg   200
 /*.svg          /placeholder.svg 200
 
-# API routes (if you add any backend APIs later)
-/api/*  https://api.example.com/:splat  200
+# API routes - forward /api/* to Netlify Functions
+/api/*   /.netlify/functions/:splat   200

@@ -64,6 +64,16 @@ export const ProjectCard = ({ project, featured = false, onViewDetails }: Projec
             {project.category}
           </Badge>
         )}
+        {/* Tags */}
+        {project.tags && project.tags.length > 0 && (
+          <div className="absolute bottom-2 right-2 flex gap-1">
+            {project.tags.map((tag, index) => (
+              <Badge key={index} className="bg-green-100 text-green-800 border-green-200 text-xs">
+                {tag}
+              </Badge>
+            ))}
+          </div>
+        )}
 
         {/* Featured Badge */}
         {featured && (

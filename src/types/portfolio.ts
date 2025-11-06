@@ -50,6 +50,7 @@ export interface ProjectDetail extends Project {
   achievements?: string[];
   images?: string[];
   learnings?: string[];
+  tags?: string[];
 }
 
 export interface Experience {

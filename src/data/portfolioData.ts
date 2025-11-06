@@ -103,6 +103,7 @@ export const portfolioData: PortfolioData = {
       link: "https://play.google.com/store/apps/details?id=com.easecraft.financialcalculator",
       status: "Live",
       category: "FinTech",
+      tags: ["Live on Play Store"],
       icon: "Calculator",
       demoUrl:
         "https://play.google.com/store/apps/details?id=com.easecraft.financialcalculator",

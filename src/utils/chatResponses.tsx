@@ -234,22 +234,23 @@ export const generateResponse = (
   }
 
   // Skills responses - more natural and conversational
-  if (
-    lowercaseQuery.includes("skill") ||
-    lowercaseQuery.includes("technolog") ||
-    lowercaseQuery.includes("know") ||
-    lowercaseQuery.includes("stack")
-  ) {
-    return createResponse(
-      "I have a solid foundation across the **full stack**!\n\nFor **Frontend**, I work with React, JavaScript & TypeScript, HTML5/CSS3, and Redux. On the **Backend**, I'm comfortable with Java, Node.js, Python, and Spring Boot.\n\nFor **databases**, I use PostgreSQL, MySQL, Supabase, and Firebase. My go-to **tools** include Git & GitHub, Docker, AWS, VS Code, and various AI tools.\n\n*I love being a full-stack developer because it gives me the complete picture!* 🚀\n\nWant to see these skills in action through my projects?",
-      undefined,
-      [
-        "Show me your projects",
-        "Which framework do you prefer?",
-        "Tell me about your experience",
-      ],
-    );
-  }
+    // Skills responses - more natural and conversational
+    if (
+      lowercaseQuery.includes("skill") ||
+      lowercaseQuery.includes("technolog") ||
+      lowercaseQuery.includes("know") ||
+      lowercaseQuery.includes("stack")
+    ) {
+      return createResponse(
+        "I have a solid foundation across the **full stack**! Here's a visual breakdown of my technical skills:",
+        <SkillsVisualization skills={portfolioData.skills} />,
+        [
+          "Show me your projects",
+          "Which framework do you prefer?",
+          "Tell me about your experience",
+        ],
+      );
+    }
 
   // About responses - more conversational (check AFTER experience and hobbies to avoid false matches)
   if (
