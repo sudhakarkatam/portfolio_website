@@ -381,6 +381,12 @@ const Index = () => {
     handleSendMessage(query);
   };
 
+  const handleLinkClick = (href: string) => {
+    // Remove the '#' prefix
+    const section = href.replace(/^#/, '');
+    handleNavigate(section);
+  };
+
   const handleNavigate = (section: string, projectId?: string) => {
     if (section === "games") {
       setCurrentView("games");
@@ -545,6 +551,7 @@ const Index = () => {
                       : undefined
                   }
                   onSuggestionClick={handleSuggestionClick}
+                  onLinkClick={handleLinkClick}
                 />
               ))}
               {isTyping && <TypingIndicator />}

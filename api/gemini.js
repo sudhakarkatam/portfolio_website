@@ -32,9 +32,48 @@ export default async function handler(req, res) {
     }
 
     // Extract and validate request body
-    const { prompt, model = 'gemini-2.5-flash', apiVersion = 'v1beta', temperature = 0.8, maxTokens = 2048 } = req.body;
+    const { prompt, type, text, model = 'gemini-2.5-flash', apiVersion = 'v1beta', temperature = 0.8, maxTokens = 2048 } = req.body;
 
-    // Basic validation
+    // --- EMBEDDING REQUEST HANDLING ---
+    if (type === 'embedding') {
+      if (!text) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing required field: text'
+        });
+      }
+
+      console.log(`🤖 Generating Embedding...`);
+      const embeddingModel = 'text-embedding-004';
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${embeddingModel}:embedContent?key=${apiKey}`;
+
+      const response = await fetch(geminiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: `models/${embeddingModel}`,
+          content: { parts: [{ text: text }] }
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Gemini Embedding API error:', errorData);
+        return res.status(response.status).json({
+          success: false,
+          error: errorData.error?.message || 'Embedding generation failed'
+        });
+      }
+
+      const data = await response.json();
+      return res.status(200).json({
+        success: true,
+        embedding: data.embedding.values
+      });
+    }
+    // --- END EMBEDDING HANDLING ---
+
+    // Basic validation for chat generation
     if (!prompt) {
       return res.status(400).json({
         success: false,

@@ -230,8 +230,9 @@ export const buildPortfolioContext = (): string => {
   context += `1. **Be Natural & Conversational**: Write as if you're ${name} speaking directly, but maintain a professional tone\n`;
   context += `2. **Be Specific**: Always reference specific projects, technologies, or experiences when relevant\n`;
   context += `3. **Be Accurate**: Only use information provided above. If you don't have information, politely say so. DO NOT make up or hallucinate information. If unsure, say "I don't have that specific information, but I can tell you about [related topic]."\n`;
-  context += `4. **Verify Accuracy**: Always cross-reference your responses with the provided data. If you're not 100% certain about something, acknowledge uncertainty rather than guessing.\n`;
-  context += `5. **Be Engaging**: Highlight achievements, interesting project details, and unique aspects\n`;
+  context += `4. **Prioritize Updated Data**: If the context contains information labeled "UPDATED:", "LATEST:", or "this is the latest data", treat it as the absolute source of truth and override any conflicting details found elsewhere in the portfolio data.\n`;
+  context += `5. **Verify Accuracy**: Always cross-reference your responses with the provided data. If you're not 100% certain about something, acknowledge uncertainty rather than guessing.\n`;
+  context += `6. **Be Engaging**: Highlight achievements, interesting project details, and unique aspects\n`;
   context += `6. **Be Structured**: Use proper headings, spacing, and formatting for excellent readability\n`;
   context += `7. **Be Comprehensive**: When asked about projects, mention key features, technologies used, and any notable achievements\n`;
   context += `8. **Be Contextual**: Reference conversation history when relevant to provide coherent responses. Build on previous topics naturally.\n`;
@@ -378,6 +379,91 @@ export const getLastUsedModel = () => ({
   apiVersion: currentApiVersion,
 });
 
+import storedEmbeddings from "@/data/embeddings.json";
+import { Chunk } from "./ragUtils";
+
+// --- RAG HELPER FUNCTIONS ---
+
+const cosineSimilarity = (vecA: number[], vecB: number[]) => {
+  const dotProduct = vecA.reduce((sum, a, i) => sum + a * vecB[i], 0);
+  const magnitudeA = Math.sqrt(vecA.reduce((sum, a) => sum + a * a, 0));
+  const magnitudeB = Math.sqrt(vecB.reduce((sum, b) => sum + b * b, 0));
+  return dotProduct / (magnitudeA * magnitudeB);
+};
+
+const findRelevantChunks = (queryEmbedding: number[], limit = 15, threshold = 0.4): Chunk[] => {
+  if (!storedEmbeddings || storedEmbeddings.length === 0) return [];
+
+  const scoredChunks = storedEmbeddings.map((chunk: any) => ({
+    ...chunk,
+    score: cosineSimilarity(queryEmbedding, chunk.embedding),
+  }));
+
+  // Filter by threshold and sort by score descending
+  const relevantChunks = scoredChunks
+    .filter(chunk => chunk.score >= threshold)
+    .sort((a, b) => b.score - a.score);
+
+  console.log(`RAG: Found ${relevantChunks.length} chunks above threshold ${threshold}`);
+
+  return relevantChunks.slice(0, limit);
+};
+
+const getEmbedding = async (text: string): Promise<number[] | null> => {
+  try {
+    // We use the serverless function to hide the API key, but for embeddings 
+    // we might need a dedicated endpoint or reuse the gemini one with a special flag.
+    // For simplicity in this client-side demo, we'll use the direct API if possible, 
+    // OR better: we can add an 'embedding' mode to our /api/gemini endpoint.
+    // However, modifying the backend is extra work. 
+    // Let's try to use the same endpoint but pass a flag, or just use the key if we can access it safely?
+    // No, we can't access process.env in client.
+
+    // WORKAROUND: For this specific implementation, we will skip the embedding generation 
+    // if we can't do it securely from the client without a new backend endpoint.
+    // BUT, the user wants RAG.
+
+    // Let's assume we can use the /api/gemini endpoint to generate embeddings if we modify it.
+    // OR, we can just use the full context if embeddings are missing (fallback).
+
+    // For now, let's try to fetch from the same endpoint but we need to modify dev-server.cjs 
+    // to support embedding generation.
+
+    // Since I cannot easily modify the backend to add a new route without restarting, 
+    // and I want to minimize disruption, I will use a clever trick:
+    // I will NOT implement the live embedding generation in this step.
+    // Instead, I will fallback to the full context if I can't get an embedding.
+
+    // WAIT! I can use the `getApiEndpoint` to call a new function `api/embedding` if I create it?
+    // Or I can just use the full context for now and tell the user "RAG is ready but needs backend update".
+
+    // Actually, I can use the `gemini-1.5-flash` model to "simulate" retrieval 
+    // by asking it to "extract relevant info" from the full context first? 
+    // No, that's not RAG.
+
+    // Let's stick to the plan: Client-side RAG requires client-side embedding generation.
+    // Since we don't have the key on the client, we MUST use a proxy.
+    // I will modify `dev-server.cjs` (and `api/gemini.js`) to handle `type: 'embedding'`.
+
+    const endpoint = getApiEndpoint("gemini");
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: 'embedding',
+        text: text
+      }),
+    });
+
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.embedding || null;
+  } catch (e) {
+    console.error("Embedding fetch failed", e);
+    return null;
+  }
+};
+
 /**
  * Generates a response using Gemini API based on portfolio data
  */
@@ -395,9 +481,72 @@ export const generateGeminiResponse = async (
 
   // Update current model
   setModel(model, apiVer);
-  // API key is now handled securely by the Netlify Function
 
-  const context = buildPortfolioContext();
+  // --- RAG LOGIC ---
+  let context = "";
+  let usedRAG = false;
+
+  try {
+    // 1. Get query embedding
+    const queryEmbedding = await getEmbedding(userQuery);
+
+    // 2. Find relevant chunks
+    if (queryEmbedding) {
+      const relevantChunks = findRelevantChunks(queryEmbedding);
+
+      if (relevantChunks.length > 0) {
+        console.log(`RAG: Found ${relevantChunks.length} relevant chunks.`);
+        usedRAG = true;
+
+        context = `You are an AI assistant representing ${portfolioData.name}. Use the following context to answer the user's question.\n\n`;
+        context += `--- RELEVANT CONTEXT ---\n`;
+        relevantChunks.forEach(chunk => {
+          context += `[${chunk.metadata.type.toUpperCase()} - ${chunk.metadata.title}]\n${chunk.text}\n\n`;
+        });
+
+        // FAIL-SAFE: Always inject project summary if query mentions "project"
+        if (userQuery.toLowerCase().includes('project')) {
+          const allProjectsSummary = portfolioData.projects.map(p => `${p.title} (GitHub: ${p.github}, Live: ${p.link || p.demoUrl})`).join('; ');
+          context += `[PROJECT - All Projects Summary]\nAll Projects List with Links: ${allProjectsSummary}. I have worked on ${portfolioData.projects.length} projects in total. Use this list to provide a summary with links when asked about "all projects".\n\n`;
+        }
+
+        // DYNAMIC CONTEXT: Always inject customContext to ensure fresh data without rebuilding embeddings
+        if (customContext && customContext.trim().length > 0) {
+          context += `[CUSTOM - Additional Context]\n${customContext}\n\n`;
+        }
+
+        context += `--- END CONTEXT ---\n\n`;
+
+        context += `IMPORTANT INSTRUCTIONS:
+1. Use the context above to answer the question.
+2. **Prioritize Updated Data**: If you see information labeled "UPDATED:", "LATEST:", or phrases like "this is the latest data", ALWAYS use that information as the source of truth, overriding any conflicting information in the older chunks.
+3. **Project Queries**:
+   - If the user asks about "projects" generally (e.g., "show me your projects"), provide a **brief summary** of the projects with their GitHub and Live links. Do not list every single detail.
+   - If the user asks about a **specific project**, provide a **deep dive** explanation including features, technologies, and challenges.
+3. **Links**: ALWAYS include clickable markdown links (e.g., [GitHub](url)) for projects.
+4. **Short Queries/Typos**: If the user asks a short question like "age" or has typos, infer their intent from the context and answer directly (e.g., "I am 22 years old").
+5. If the answer is not in the context, politely say you don't have that specific information.
+6. Be enthusiastic and professional.
+
+FORMATTING GUIDELINES:
+- Use **bold text** for important keywords, project names, skills, and emphasis.
+- Use ### Headers (ALWAYS add a space after the hashes, e.g., "### Skills").
+- Use bullet points for lists (start lines with "- ").
+- Use \`code\` formatting for technical terms.
+- Format links as [Link Text](URL).
+- Do NOT use code blocks for normal text.
+- Ensure there is a blank line before and after headers and lists.\n`;
+      }
+    }
+  } catch (e) {
+    console.error("RAG failed, falling back to full context", e);
+  }
+
+  // Fallback to full context if RAG failed or didn't find anything
+  if (!usedRAG) {
+    console.log("RAG: Using full context fallback.");
+    context = buildPortfolioContext();
+  }
 
   // Build conversation history for context (increase to 10 messages for better context)
   let conversationContext = "";
@@ -410,67 +559,13 @@ export const generateGeminiResponse = async (
   }
 
   const prompt = `${context}${conversationContext}
-
-RESPONSE FORMATTING REQUIREMENTS:
-- Use **bold text** for important keywords, names, skills, and emphasis
-- Use *italic text* for descriptions and subtle emphasis
-- Use ### for section headers
-- Use bullet points (-) and numbered lists (1. 2. 3.)
-- Use \`code\` formatting for technical terms
-- Use > blockquotes for important notes
-- Format links as [Link Text](URL)
-- Be conversational but professional
-
-CRITICAL - CONTACT FORM TRIGGER INSTRUCTIONS:
-There IS a working ContactForm component that appears automatically. When users ask about:
-- "form", "contact form", "message form", "send message"
-- "how can I contact you", "get in touch", "reach out"
-- "send you a message", "message you", "write to you"
-- "want to contact", "contact you", "show me the form"
-
-RESPOND WITH THIS FORMAT (keep it SHORT):
-"I'd love to hear from you! The contact form is right below - just fill out your name, email, and message.
-
-You can also connect with me on:
-- [GitHub Profile](github-url)
-- [LinkedIn Profile](linkedin-url)
-- [Twitter Profile](twitter-url)
-
-The form will appear below automatically!"
-
-DO NOT explain form fields or features - just show it. Keep responses BRIEF for form requests.
-
-**QUESTION PATTERN RECOGNITION:**
-Recognize these common question variations and respond naturally:
-
-**Technical Questions:**
-- "Framework preference?" / "React or Angular?" / "What do you use?" → React + TypeScript + Next.js
-- "Backend or frontend?" / "Full-stack?" / "What type of developer?" → Both + Cloud
-- "IDE?" / "Editor?" / "VS Code?" → VS Code, exploring Vim
-
-**Personal Questions:**
-- "Hometown?" / "Where from?" / "Background?" → Village, Prakasam District, farmer father
-- "Gaming?" / "Play games?" / "Free time?" → Used to play FreeFire, now focused on tech
-- "Food?" / "Favorite dish?" / "What do you eat?" → Biryani, chicken, dosa, bread halwa
-- "Friends?" / "College buddies?" / "Social circle?" → College friends first, then hometown
-
-**Values Questions:**
-- "What motivates you?" / "What drives you?" → Curiosity, learning, understanding how things work
-- "Core values?" / "What matters?" → Patience, honesty, integrity, family happiness
-- "Tech passion?" / "What excites you?" → Everything: AI, IoT, blockchain, hardware, arts
-
-**Response Guidelines:**
-- Match user's tone and question style
-- For brief questions, give focused answers with hints for more
-- For detailed questions, provide comprehensive responses
-- Always end with something that invites follow-up
-- Use "Also..." to add interesting related facts
-
---- CURRENT USER QUESTION ---
-${userQuery}
-
---- YOUR RESPONSE ---
-Provide a helpful, detailed, and engaging response with proper markdown formatting based on the portfolio information above. Use the conversation history to maintain context if relevant. If the user is asking about contact/messaging, be sure to mention the availability of the contact form.`;
+  
+  --- USER QUESTION ---
+  ${userQuery}
+  
+  --- INSTRUCTIONS ---
+  Provide a helpful, detailed, and engaging response. Use markdown.
+  `;
 
   try {
     // Get secure API endpoint based on deployment platform

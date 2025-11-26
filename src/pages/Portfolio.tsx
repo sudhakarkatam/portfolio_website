@@ -559,7 +559,7 @@ const Portfolio = () => {
                     {project.tags.map((tag, index) => (
                       <Badge key={index} className="bg-green-100 text-green-800 border-green-200 text-xs">
                         {tag}
-                      </Badge>
+                      </Badge>  
                     ))}
                   </div>
                 )}

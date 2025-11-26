@@ -26,7 +26,7 @@ const AVAILABLE_MODELS: ModelOption[] = [
     id: 'gemini-2.5-flash',
     name: 'Gemini 2.5 Flash',
     description: 'Free tier with usage limits',
-    model: 'gemini-2.5-flash-preview-05-20',
+    model: 'gemini-2.5-flash',
     apiVersion: 'v1beta',
     provider: 'gemini',
   },
@@ -35,6 +35,14 @@ const AVAILABLE_MODELS: ModelOption[] = [
     name: 'TNG: DeepSeek R1T2 Chimera',
     description: 'Free tier with usage limits',
     model: 'tngtech/deepseek-r1t2-chimera:free',
+    apiVersion: '',
+    provider: 'openrouter',
+  },
+  {
+    id: 'xai-grok-fast',
+    name: 'xAI: Grok 4.1 Fast',
+    description: 'Free tier (Limited time)',
+    model: 'x-ai/grok-beta',
     apiVersion: '',
     provider: 'openrouter',
   },
@@ -58,7 +66,7 @@ export const ModelSelector = ({ selectedModel, onModelChange, className }: Model
           setModelInfo(info);
         }
       };
-      
+
       checkModel();
       const interval = setInterval(checkModel, 1000);
       return () => clearInterval(interval);
@@ -72,7 +80,7 @@ export const ModelSelector = ({ selectedModel, onModelChange, className }: Model
 
   return (
     <Select value={selectedModel} onValueChange={onModelChange}>
-      <SelectTrigger 
+      <SelectTrigger
         className={cn(
           "h-8 w-auto min-w-[140px] border-border/50 bg-background/50 hover:bg-background/80 text-xs md:text-sm",
           isAIMode && "border-accent/30 bg-accent/10",
