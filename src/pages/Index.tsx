@@ -199,11 +199,13 @@ const Index = () => {
             setStreamingMessageId(null);
 
             // Debug logging for contact form detection
-            console.log("Contact form query detection:", {
-              messageText: messageText,
-              isContactFormQuery: isContactFormQuery,
-              isContactInfoQuery: isContactInfoQuery,
-            });
+            if (import.meta.env.DEV) {
+              console.log("Contact form query detection:", {
+                messageText: messageText,
+                isContactFormQuery: isContactFormQuery,
+                isContactInfoQuery: isContactInfoQuery,
+              });
+            }
 
             // If it's a contact form query, show the ContactForm component
             if (isContactFormQuery) {

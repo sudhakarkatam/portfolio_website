@@ -404,7 +404,9 @@ const findRelevantChunks = (queryEmbedding: number[], limit = 15, threshold = 0.
     .filter(chunk => chunk.score >= threshold)
     .sort((a, b) => b.score - a.score);
 
-  console.log(`RAG: Found ${relevantChunks.length} chunks above threshold ${threshold}`);
+  if (import.meta.env.DEV) {
+    console.log(`RAG: Found ${relevantChunks.length} chunks above threshold ${threshold}`);
+  }
 
   return relevantChunks.slice(0, limit);
 };
@@ -546,7 +548,9 @@ FORMATTING GUIDELINES:
 
   // Fallback to full context if RAG failed or didn't find anything
   if (!usedRAG) {
-    console.log("RAG: Using full context fallback.");
+    if (import.meta.env.DEV) {
+      console.log("RAG: Using full context fallback.");
+    }
     context = buildPortfolioContext();
   }
 
@@ -601,9 +605,11 @@ FORMATTING GUIDELINES:
       throw new Error("Invalid response format from Gemini API");
     }
 
-    console.log(
-      `✅ Successfully using Gemini model: ${model} (API version: ${apiVer})`,
-    );
+    if (import.meta.env.DEV) {
+      console.log(
+        `✅ Successfully using Gemini model: ${model} (API version: ${apiVer})`,
+      );
+    }
 
     return data.response.trim();
   } catch (error) {
