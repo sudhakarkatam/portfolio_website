@@ -43,18 +43,29 @@ export const ContactForm = () => {
     setIsSubmitting(true);
 
     try {
-      // Use platform-aware API endpoint for secure server-side processing
-      const endpoint = getApiEndpoint("contact");
-      const response = await fetch(endpoint, {
+      // Direct client-side submission to Web3Forms
+      // Using process.env.WEB3FORMS_ACCESS_KEY (exposed via vite.config.ts)
+      const accessKey = process.env.WEB3FORMS_ACCESS_KEY;
+
+      if (!accessKey) {
+        console.error("Missing API Key. Ensure WEB3FORMS_ACCESS_KEY is set in .env");
+        throw new Error("Contact form configuration error: Missing API Key");
+      }
+
+      const response = await fetch("https://api.web3forms.com/submit", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Accept": "application/json",
         },
         body: JSON.stringify({
+          access_key: accessKey,
           name: data.name,
           email: data.email,
           message: data.message,
           subject: `New Message from ${data.name} - Portfolio Contact Form`,
+          from_name: "Portfolio Website",
+          botcheck: false,
         }),
       });
 
