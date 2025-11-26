@@ -4,17 +4,6 @@
   "outputDirectory": "dist",
   "devCommand": "npm run dev",
   "framework": "vite",
-  "functions": {
-    "api/contact.js": {
-      "runtime": "nodejs18.x"
-    },
-    "api/gemini.js": {
-      "runtime": "nodejs18.x"
-    },
-    "api/openrouter.js": {
-      "runtime": "nodejs18.x"
-    }
-  },
   "rewrites": [
     {
       "source": "/((?!api/.*).*)",
