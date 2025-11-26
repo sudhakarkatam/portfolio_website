@@ -495,7 +495,9 @@ export const generateGeminiResponse = async (
       const relevantChunks = findRelevantChunks(queryEmbedding);
 
       if (relevantChunks.length > 0) {
-        console.log(`RAG: Found ${relevantChunks.length} relevant chunks.`);
+        if (import.meta.env.DEV) {
+          console.log(`RAG: Found ${relevantChunks.length} relevant chunks.`);
+        }
         usedRAG = true;
 
         context = `You are an AI assistant representing ${portfolioData.name}. Use the following context to answer the user's question.\n\n`;
