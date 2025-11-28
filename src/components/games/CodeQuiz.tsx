@@ -343,7 +343,7 @@ const allQuizQuestions: Question[] = [
     question: "Which CSS property is used to change the text color?",
     options: [
       "text-color",
-      "font-color", 
+      "font-color",
       "color",
       "text-style"
     ],
@@ -708,6 +708,7 @@ export const CodeQuiz = ({ onBack }: CodeQuizProps) => {
   const [score, setScore] = useState(0);
   const [quizFinished, setQuizFinished] = useState(false);
   const [quizQuestions, setQuizQuestions] = useState<Question[]>([]);
+  const [answeredQuestions, setAnsweredQuestions] = useState<boolean[]>([]);
 
   // Function to get random questions
   const getRandomQuestions = (allQuestions: Question[], count: number): Question[] => {
@@ -719,6 +720,7 @@ export const CodeQuiz = ({ onBack }: CodeQuizProps) => {
   useEffect(() => {
     const randomQuestions = getRandomQuestions(allQuizQuestions, 5);
     setQuizQuestions(randomQuestions);
+    setAnsweredQuestions(new Array(5).fill(false));
   }, []);
 
   const currentQ = quizQuestions[currentQuestion];
@@ -741,12 +743,12 @@ export const CodeQuiz = ({ onBack }: CodeQuizProps) => {
 
   const handleSubmitAnswer = () => {
     if (selectedAnswer === null) return;
-    
+
     setShowResult(true);
     if (selectedAnswer === currentQ.correct) {
       setScore(prev => prev + 1);
     }
-    
+
     const newAnswered = [...answeredQuestions];
     newAnswered[currentQuestion] = true;
     setAnsweredQuestions(newAnswered);
@@ -765,6 +767,7 @@ export const CodeQuiz = ({ onBack }: CodeQuizProps) => {
   const resetQuiz = () => {
     const randomQuestions = getRandomQuestions(allQuizQuestions, 5);
     setQuizQuestions(randomQuestions);
+    setAnsweredQuestions(new Array(5).fill(false));
     setCurrentQuestion(0);
     setSelectedAnswer(null);
     setShowResult(false);
@@ -781,124 +784,200 @@ export const CodeQuiz = ({ onBack }: CodeQuizProps) => {
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto p-6">
+    <div className="w-full max-w-6xl mx-auto p-4 md:p-8 font-mono text-sm">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="space-y-6"
+        className="bg-[#1e1e1e] rounded-lg shadow-2xl overflow-hidden border border-[#333] h-[80vh] flex flex-col"
       >
-        <div className="flex items-center justify-between">
-          <Button variant="ghost" onClick={onBack} className="flex items-center gap-2">
-            <ArrowLeft className="w-4 h-4" />
-            Back to Games
-          </Button>
-          <Button variant="outline" onClick={resetQuiz} className="flex items-center gap-2">
-            <RotateCcw className="w-4 h-4" />
-            New Quiz
-          </Button>
+        {/* VS Code Title Bar */}
+        <div className="bg-[#3c3c3c] px-4 py-2 flex items-center justify-between border-b border-[#1e1e1e] shrink-0">
+          <div className="flex items-center gap-2">
+            <div className="flex gap-2">
+              <div className="w-3 h-3 rounded-full bg-[#ff5f56]" />
+              <div className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
+              <div className="w-3 h-3 rounded-full bg-[#27c93f]" />
+            </div>
+            <span className="ml-4 text-[#cccccc] text-xs">quiz.tsx — ChattyCV — Visual Studio Code</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" onClick={onBack} className="h-6 text-[#cccccc] hover:text-white hover:bg-[#505050]">
+              <ArrowLeft className="w-3 h-3 mr-1" /> Back
+            </Button>
+          </div>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-center text-2xl">Code Quiz</CardTitle>
-            <div className="flex justify-center items-center gap-4 text-sm text-muted-foreground">
-              <Badge variant="outline">{currentQ.category}</Badge>
-              <span>Question {currentQuestion + 1} of {quizQuestions.length}</span>
-              <span>Score: {score}/{quizQuestions.length}</span>
+        <div className="flex flex-1 overflow-hidden">
+          {/* Sidebar */}
+          <div className="w-64 bg-[#252526] border-r border-[#1e1e1e] hidden md:flex flex-col shrink-0">
+            <div className="p-2 text-[#bbb] text-xs uppercase font-bold tracking-wider flex justify-between items-center">
+              <span>Explorer</span>
+              <span className="text-[10px] opacity-50">...</span>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {quizFinished ? (
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="text-center py-8"
-              >
-                <Trophy className="w-16 h-16 text-accent mx-auto mb-4" />
-                <h3 className="text-2xl font-bold text-accent mb-4">Quiz Complete!</h3>
-                <div className="text-4xl font-bold text-foreground mb-2">
-                  {score}/{quizQuestions.length}
-                </div>
-                <p className={`text-lg font-semibold mb-6 ${getScoreMessage(score, quizQuestions.length).color}`}>
-                  {getScoreMessage(score, quizQuestions.length).message}
-                </p>
-                <div className="text-sm text-muted-foreground">
-                  {Math.round((score / quizQuestions.length) * 100)}% correct answers
-                </div>
-              </motion.div>
-            ) : (
-              <>
-                <div className="text-lg font-medium text-foreground mb-6">
-                  {currentQ.question}
-                </div>
+            <div className="mt-2 flex-1 overflow-y-auto">
+              <div className="px-2 py-1 text-[#e0e0e0] font-bold text-xs flex items-center gap-1">
+                <span className="text-[10px]">▼</span> CHATTY-CV
+              </div>
+              <div className="px-4 py-1 text-[#e0e0e0] bg-[#37373d] flex items-center gap-2 border-l-2 border-[#007acc]">
+                <span className="text-[#519aba] text-xs">TSX</span>
+                <span>quiz_question_{currentQuestion + 1}.tsx</span>
+              </div>
+              {quizQuestions.map((q, idx) => (
+                idx !== currentQuestion && (
+                  <div key={q.id} className="px-4 py-1 text-[#999] hover:bg-[#2a2d2e] flex items-center gap-2 cursor-pointer border-l-2 border-transparent">
+                    <span className="text-[#519aba] text-xs">TSX</span>
+                    <span>quiz_question_{idx + 1}.tsx</span>
+                    {answeredQuestions[idx] && <CheckCircle className="w-3 h-3 ml-auto text-green-500" />}
+                  </div>
+                )
+              ))}
+            </div>
+          </div>
 
-                <div className="space-y-3">
-                  {currentQ.options.map((option, index) => (
-                    <motion.div
-                      key={index}
-                      whileHover={{ scale: 1.02 }}
-                      className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                        selectedAnswer === index
-                          ? showResult
-                            ? index === currentQ.correct
-                              ? 'border-green-500 bg-green-50 dark:bg-green-950'
-                              : 'border-red-500 bg-red-50 dark:bg-red-950'
-                            : 'border-accent bg-accent/10'
-                          : 'border-border hover:border-accent/50'
-                      }`}
-                      onClick={() => handleAnswerSelect(index)}
-                    >
-                      <div className="flex items-center gap-3">
-                        {showResult && (
-                          <>
-                            {index === currentQ.correct ? (
-                              <CheckCircle className="w-5 h-5 text-green-500" />
-                            ) : selectedAnswer === index ? (
-                              <XCircle className="w-5 h-5 text-red-500" />
-                            ) : (
-                              <div className="w-5 h-5" />
-                            )}
-                          </>
-                        )}
-                        <span className="text-foreground">{option}</span>
+          {/* Main Editor Area */}
+          <div className="flex-1 flex flex-col bg-[#1e1e1e] overflow-hidden">
+            {/* Tabs */}
+            <div className="flex bg-[#252526] shrink-0 overflow-x-auto">
+              <div className="px-4 py-2 bg-[#1e1e1e] text-[#e0e0e0] border-t-2 border-[#007acc] flex items-center gap-2 text-xs min-w-fit">
+                <span className="text-[#519aba]">TSX</span>
+                <span>quiz_question_{currentQuestion + 1}.tsx</span>
+                <XCircle className="w-3 h-3 ml-2 text-[#999]" />
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 p-4 md:p-8 overflow-y-auto relative">
+              {quizFinished ? (
+                <div className="flex flex-col items-center justify-center h-full space-y-6 text-center">
+                  <Trophy className="w-20 h-20 text-[#ffbd2e]" />
+                  <h2 className="text-3xl font-bold text-[#e0e0e0]">Build Complete</h2>
+                  <div className="text-xl text-[#999]">
+                    Tests Passed: <span className="text-[#4ec9b0]">{score}/{quizQuestions.length}</span>
+                  </div>
+                  <p className={`text-lg ${getScoreMessage(score, quizQuestions.length).color}`}>
+                    {getScoreMessage(score, quizQuestions.length).message}
+                  </p>
+                  <Button onClick={resetQuiz} className="bg-[#007acc] hover:bg-[#0062a3] text-white">
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    Start New Build
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex gap-4 h-full">
+                  <div className="text-[#858585] text-right select-none space-y-1 hidden sm:block font-mono text-xs w-8 shrink-0">
+                    {Array.from({ length: 30 }, (_, i) => <div key={i}>{i + 1}</div>)}
+                  </div>
+                  <div className="flex-1 space-y-6 max-w-3xl">
+                    {/* Question as Comment */}
+                    <div className="text-[#6a9955] italic font-mono">
+                      /**<br />
+                      &nbsp;* Question {currentQuestion + 1} of {quizQuestions.length}:<br />
+                      &nbsp;* {currentQ.question}<br />
+                      &nbsp;*/
+                    </div>
+
+                    {/* Options as Code */}
+                    <div className="space-y-2 font-mono">
+                      <div>
+                        <span className="text-[#c586c0]">const</span> <span className="text-[#4fc1ff]">submitAnswer</span> <span className="text-[#d4d4d4]">=</span> <span className="text-[#c586c0]">async</span> <span className="text-[#d4d4d4]">(</span><span className="text-[#9cdcfe]">selectedOption</span><span className="text-[#d4d4d4]">)</span> <span className="text-[#c586c0]">=&#62;</span> <span className="text-[#da70d6]">&#123;</span>
                       </div>
-                    </motion.div>
-                  ))}
-                </div>
 
-                {showResult && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-muted/50 rounded-lg p-4"
-                  >
-                    <h4 className="font-semibold text-foreground mb-2">Explanation:</h4>
-                    <p className="text-muted-foreground">{currentQ.explanation}</p>
-                  </motion.div>
-                )}
+                      <div className="pl-4 space-y-3 mt-2">
+                        {currentQ.options.map((option, index) => (
+                          <motion.div
+                            key={index}
+                            whileHover={{ x: 5 }}
+                            className={`
+                               p-3 rounded border cursor-pointer transition-all flex items-center gap-3 group
+                               ${selectedAnswer === index
+                                ? showResult
+                                  ? index === currentQ.correct
+                                    ? 'bg-[#1e3a1e] border-[#4ec9b0]' // Correct selected
+                                    : 'bg-[#3a1e1e] border-[#f44336]' // Wrong selected
+                                  : 'bg-[#264f78] border-[#007acc]' // Selected
+                                : 'bg-[#252526] border-[#333] hover:bg-[#2a2d2e]'}
+                             `}
+                            onClick={() => handleAnswerSelect(index)}
+                          >
+                            <span className="text-[#569cd6] shrink-0">await</span>
+                            <span className="text-[#dcdcaa]">choose</span>
+                            <span className="text-[#ffd700]">(</span>
+                            <span className="text-[#ce9178] break-all">"{option}"</span>
+                            <span className="text-[#ffd700]">)</span>
+                            <span className="text-[#d4d4d4] shrink-0">;</span>
 
-                <div className="flex justify-center">
-                  {!showResult ? (
-                    <Button 
-                      onClick={handleSubmitAnswer}
-                      disabled={selectedAnswer === null}
-                      className="bg-accent hover:bg-accent/90"
-                    >
-                      Submit Answer
-                    </Button>
-                  ) : (
-                    <Button 
-                      onClick={handleNextQuestion}
-                      className="bg-accent hover:bg-accent/90"
-                    >
-                      {currentQuestion < quizQuestions.length - 1 ? 'Next Question' : 'Finish Quiz'}
-                    </Button>
-                  )}
+                            {/* Only show Red X for wrong selected answer. 
+                                 Only show Green Check for correct answer IF it was selected OR if we want to reveal it. 
+                                 User asked for "red not green" if wrong. 
+                                 So if I pick wrong, I see Red X. 
+                                 I will NOT show the green check on the correct answer if the user picked wrong, to strictly follow "red not green".
+                                 But I will show green check if they picked correct.
+                             */}
+                            {showResult && index === currentQ.correct && selectedAnswer === index && (
+                              <CheckCircle className="w-4 h-4 text-[#4ec9b0] ml-auto shrink-0" />
+                            )}
+                            {showResult && selectedAnswer === index && index !== currentQ.correct && (
+                              <XCircle className="w-4 h-4 text-[#f44336] ml-auto shrink-0" />
+                            )}
+                          </motion.div>
+                        ))}
+                      </div>
+
+                      <div>
+                        <span className="text-[#da70d6]">&#125;</span><span className="text-[#d4d4d4]">;</span>
+                      </div>
+                    </div>
+
+                    {/* Controls */}
+                    <div className="pt-6 flex gap-4">
+                      {!showResult ? (
+                        <Button
+                          onClick={handleSubmitAnswer}
+                          disabled={selectedAnswer === null}
+                          className="bg-[#007acc] hover:bg-[#0062a3] text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Run Code
+                        </Button>
+                      ) : (
+                        <div className="space-y-4 w-full">
+                          <div className="p-4 bg-[#252526] border-l-4 border-[#007acc] text-[#d4d4d4]">
+                            <div className="text-[#569cd6] font-bold mb-1">Console Output:</div>
+                            <div className="font-mono text-sm opacity-90">
+                              {selectedAnswer === currentQ.correct ? (
+                                <span className="text-[#4ec9b0]">&gt; Success: Correct Answer!</span>
+                              ) : (
+                                <span className="text-[#f44336]">&gt; Error: Incorrect Answer.</span>
+                              )}
+                              <div className="mt-2 text-[#cccccc]">{currentQ.explanation}</div>
+                            </div>
+                          </div>
+                          <Button onClick={handleNextQuestion} className="bg-[#4ec9b0] hover:bg-[#3da892] text-black font-bold">
+                            {currentQuestion < quizQuestions.length - 1 ? 'Next File' : 'Finish Build'}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Status Bar */}
+        <div className="bg-[#007acc] text-white px-4 py-1 text-xs flex justify-between items-center shrink-0 overflow-hidden whitespace-nowrap">
+          <div className="flex gap-4">
+            <span className="flex items-center gap-1"><div className="w-3 h-3 rounded-full bg-transparent border border-white flex items-center justify-center text-[8px]">x</div> 0</span>
+            <span className="flex items-center gap-1"><div className="w-3 h-3 rounded-full bg-transparent border border-white flex items-center justify-center text-[8px]">!</div> 0</span>
+          </div>
+          <div className="flex gap-4">
+            <span>Ln {currentQuestion + 1}, Col 1</span>
+            <span>UTF-8</span>
+            <span>TypeScript React</span>
+            <span className="hidden sm:inline">Prettier</span>
+            <span className="hidden sm:inline">Go Live</span>
+          </div>
+        </div>
       </motion.div>
     </div>
   );

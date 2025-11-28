@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+// import { ToolInvocation } from "ai"; // Error: 'ai' has no exported member 'ToolInvocation'
 
 export interface Message {
   id: string;
@@ -7,6 +8,7 @@ export interface Message {
   component?: ReactNode;
   suggestions?: string[];
   timestamp: Date;
+  toolInvocations?: any[];
 }
 
 export interface Skill {

@@ -1,5 +1,6 @@
-import { PortfolioData } from "@/types/portfolio";
-import { customContext } from "@/data/customContext";
+import { PortfolioData } from "../types/portfolio";
+import { customContext } from "../data/customContext";
+import { portfolioData } from "../data/portfolioData";
 
 export interface Chunk {
     id: string;
@@ -38,7 +39,7 @@ export const chunkPortfolioData = (data: PortfolioData): Chunk[] => {
     });
 
     data.projects.forEach(project => {
-        const projectText = `Project: ${project.title}. Description: ${project.description}. Technologies: ${project.technologies.join(', ')}. Features: ${project.features.join(', ')}. Results: ${project.results.map(r => r.metric + ': ' + r.value).join(', ')}. Links: GitHub (${project.github}), Live Demo (${project.link || project.demoUrl}).`;
+        const projectText = `Project: ${project.title}. Description: ${project.description}. Technologies: ${project.technologies.join(', ')}. Features: ${project.features.join(', ')}. Results: ${project.results?.map(r => r.metric + ': ' + r.value).join(', ') || 'N/A'}. Links: GitHub (${project.github}), Live Demo (${project.link || project.demoUrl}).`;
         chunks.push({
             id: `project-${project.id}`,
             text: projectText,
@@ -57,12 +58,14 @@ export const chunkPortfolioData = (data: PortfolioData): Chunk[] => {
     });
 
     // 5. Personal Traits Chunk
-    const traitsText = `Strengths: ${data.personalTraits.strengths.join(', ')}. Weaknesses: ${data.personalTraits.weaknesses.join(', ')}. Hobbies: ${data.personalTraits.hobbies.join(', ')}.`;
-    chunks.push({
-        id: 'traits',
-        text: `Personal Traits: ${traitsText}`,
-        metadata: { type: 'trait', title: 'Personal Traits' }
-    });
+    if (data.personalTraits) {
+        const traitsText = `Strengths: ${data.personalTraits.strengths.join(', ')}. Weaknesses: ${data.personalTraits.weaknesses.join(', ')}. Hobbies: ${data.personalTraits.hobbies.join(', ')}.`;
+        chunks.push({
+            id: 'traits',
+            text: `Personal Traits: ${traitsText}`,
+            metadata: { type: 'trait', title: 'Personal Traits' }
+        });
+    }
 
     // 6. Contact Chunk
     const contactText = `Email: ${data.contact.email}. GitHub: ${data.contact.github}. LinkedIn: ${data.contact.linkedin}. Twitter: ${data.contact.twitter}. Resume: ${data.contact.resume}.`;
@@ -89,3 +92,55 @@ export const chunkPortfolioData = (data: PortfolioData): Chunk[] => {
 
     return chunks;
 };
+
+// Simple RAG implementation: Returns all chunks for now (Small context fits in Gemini 1.5 Flash)
+// In a larger app, we would use embeddings and cosine similarity here.
+import { createClient } from '@supabase/supabase-js';
+import { google } from '@ai-sdk/google';
+import { embed } from 'ai';
+
+export const findRelevantChunks = async (query: string): Promise<Chunk[]> => {
+    try {
+        const supabaseUrl = process.env.VITE_SUPABASE_URL;
+        const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
+
+        if (!supabaseUrl || !supabaseKey) {
+            console.warn('Supabase keys missing in ragUtils, falling back to local.');
+            return chunkPortfolioData(portfolioData);
+        }
+
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        // 1. Generate embedding for the query
+        const { embedding } = await embed({
+            model: google.textEmbeddingModel('text-embedding-004'),
+            value: query,
+        });
+
+        // 2. Search Supabase for matching documents
+        const { data: documents, error } = await supabase.rpc('match_documents', {
+            query_embedding: embedding,
+            match_threshold: 0.5, // Adjust threshold as needed
+            match_count: 10       // Adjust count as needed
+        });
+
+        if (error) {
+            console.error('Error searching documents:', error);
+            // Fallback to local chunks if DB fails
+            return chunkPortfolioData(portfolioData);
+        }
+
+        // 3. Map back to Chunk format
+        return documents.map((doc: any) => ({
+            id: doc.id.toString(),
+            text: doc.content,
+            metadata: doc.metadata
+        }));
+
+    } catch (error) {
+        console.error('Error in RAG search:', error);
+        // Fallback
+        return chunkPortfolioData(portfolioData);
+    }
+};
+

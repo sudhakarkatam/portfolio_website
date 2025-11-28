@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Message } from '@/types/portfolio';
-import { Copy, Check, Sparkles } from 'lucide-react';
+import { Copy, Check, Sparkles, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -20,6 +20,7 @@ interface ChatMessageProps {
 export const ChatMessage = ({ message, isLast, isStreaming, streamingText, onSuggestionClick, onLinkClick }: ChatMessageProps) => {
   const [copied, setCopied] = useState(false);
   const [displayText, setDisplayText] = useState('');
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const isUser = message.role === 'user';
 
   // Streaming effect for assistant messages
@@ -137,13 +138,50 @@ export const ChatMessage = ({ message, isLast, isStreaming, streamingText, onSug
                     );
                   },
                   blockquote: ({ ...props }) => (
-                    <blockquote className="border-l-4 border-accent/50 pl-4 py-1 my-4 italic text-muted-foreground bg-accent/5 rounded-r-lg" {...props} />
+                    <blockquote className="border-l-4 border-accent/50 pl-4 py-2 my-4 text-muted-foreground bg-accent/5 rounded-r-lg shadow-sm" {...props} />
+                  ),
+                  img: ({ src, alt, ...props }) => (
+                    <span
+                      className="relative my-2 mx-1 rounded-lg overflow-hidden shadow-sm border border-border bg-muted/30 inline-block w-[45%] align-top cursor-pointer hover:opacity-90 transition-opacity"
+                      onClick={() => setSelectedImage(src || "")}
+                    >
+                      <img
+                        src={src}
+                        alt={alt}
+                        className="w-full h-32 object-cover"
+                        loading="lazy"
+                        {...props}
+                      />
+                      {alt && <span className="block text-[10px] text-center text-muted-foreground py-1 bg-muted/50 italic truncate px-2">{alt}</span>}
+                    </span>
                   ),
                 }}
               >
                 {contentToDisplay}
               </ReactMarkdown>
             </div>
+
+            {/* Lightbox */}
+            {selectedImage && (
+              <div
+                className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 animate-in fade-in duration-200"
+                onClick={() => setSelectedImage(null)}
+              >
+                <div className="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center">
+                  <img
+                    src={selectedImage}
+                    alt="Full view"
+                    className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+                  />
+                  <button
+                    className="absolute top-[-40px] right-0 text-white hover:text-gray-300"
+                    onClick={() => setSelectedImage(null)}
+                  >
+                    <X className="h-8 w-8" />
+                  </button>
+                </div>
+              </div>
+            )}
 
             {!isUser && !isStreaming && (
               <Button

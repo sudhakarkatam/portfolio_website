@@ -1,19 +1,28 @@
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
+const { createClient } = require('@supabase/supabase-js');
 require('dotenv').config();
 
 console.log("SCRIPT STARTED - Generating Embeddings...");
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-
 if (!GEMINI_API_KEY) {
     console.error('Error: GEMINI_API_KEY is not set in .env file');
     process.exit(1);
 }
 
-// --- PORTFOLIO DATA (Copied from src/data/portfolioData.ts) ---
-const portfolioData = {
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+
+if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.warn('⚠️ SUPABASE_SERVICE_ROLE_KEY not found. Using Anon Key. Writes may fail if RLS is enabled.');
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+// --- FALLBACK LOCAL DATA (Copied from src/data/portfolioData.ts) ---
+const fallbackPortfolioData = {
     name: "Sudhakar Reddy Katam",
     title: "Aspiring Software Engineer | Building with AI & Web",
     bio: `I am a Computer Science graduate passionate about building web and mobile applications, both for users and personal projects  you can find some of them in my projects and if you like msg me it will motivate me building more projects. A quick learner, I focus on writing clean, maintainable code and crafting user experiences that make an impact. I constantly explore modern technologies and AI integration to deliver smart, efficient solutions..`,
@@ -117,22 +126,79 @@ const portfolioData = {
     }
 };
 
-// Read customContext.ts manually to extract the string
-const customContextPath = path.resolve(process.cwd(), 'src/data/customContext.ts');
-let customContext = '';
-try {
-    const fileContent = fs.readFileSync(customContextPath, 'utf8');
-    // Extract content between backticks
-    const match = fileContent.match(/export const customContext = `([\s\S]*?)`;/);
-    if (match && match[1]) {
-        customContext = match[1];
+// --- FETCH DATA FROM SUPABASE ---
+async function fetchPortfolioData() {
+    console.log('Fetching portfolio data from Supabase...');
+    try {
+        const [projects, skills, experience, traits, contact] = await Promise.all([
+            supabase.from('projects').select('*').order('created_at', { ascending: false }),
+            supabase.from('skills').select('*'),
+            supabase.from('experience').select('*'),
+            supabase.from('personal_traits').select('*'),
+            supabase.from('contact_info').select('*')
+        ]);
+
+        if (projects.error || skills.error || experience.error || traits.error || contact.error) {
+            throw new Error('One or more tables failed to fetch');
+        }
+
+        // If tables are empty, fallback
+        if (!projects.data.length && !skills.data.length) {
+            console.warn('⚠️ Supabase tables appear empty. Using local fallback data.');
+            return fallbackPortfolioData;
+        }
+
+        // Reconstruct Object
+        const portfolio = {
+            name: fallbackPortfolioData.name, // Name/Title/Bio might be in a 'profile' table later, keeping fallback for now
+            title: fallbackPortfolioData.title,
+            bio: fallbackPortfolioData.bio,
+            projects: projects.data || [],
+            skills: skills.data || [],
+            experience: experience.data || [],
+            personalTraits: {
+                strengths: traits.data.filter(t => t.type === 'strength').map(t => t.value),
+                weaknesses: traits.data.filter(t => t.type === 'weakness').map(t => t.value),
+                hobbies: traits.data.filter(t => t.type === 'hobby').map(t => t.value)
+            },
+            contact: contact.data.reduce((acc, curr) => ({ ...acc, [curr.platform]: curr.value }), {})
+        };
+
+        // Ensure contact has defaults if missing
+        if (!portfolio.contact.email) portfolio.contact = fallbackPortfolioData.contact;
+
+        console.log('✅ Successfully fetched portfolio data from Supabase');
+        return portfolio;
+
+    } catch (error) {
+        console.error('⚠️ Error fetching from Supabase:', error.message);
+        console.log('Using local fallback data...');
+        return fallbackPortfolioData;
     }
-} catch (e) {
-    console.error('Error reading customContext.ts:', e);
 }
 
-// --- CHUNKING LOGIC (Synced with src/utils/ragUtils.ts) ---
-const chunkPortfolioData = (data) => {
+// --- FETCH SUPABASE CONTEXT ---
+async function fetchSupabaseContext() {
+    try {
+        const { data, error } = await supabase
+            .from('app_settings')
+            .select('value')
+            .eq('key', 'system_prompt')
+            .single();
+
+        if (error) throw error;
+        if (data && data.value) {
+            console.log('✅ Fetched custom context from Supabase');
+            return `\n\n[SUPABASE CONTEXT]\n${data.value}\n`;
+        }
+    } catch (error) {
+        console.warn('⚠️ Failed to fetch Supabase context:', error.message);
+    }
+    return null;
+}
+
+// --- CHUNKING LOGIC ---
+const chunkPortfolioData = (data, customContext) => {
     const chunks = [];
 
     // 1. Bio Chunk
@@ -151,7 +217,6 @@ const chunkPortfolioData = (data) => {
     });
 
     // 3. Projects Chunks
-    // Add a summary chunk for "all projects" queries
     const allProjectsSummary = data.projects.map(p => `${p.title} (GitHub: ${p.github}, Live: ${p.link || p.demoUrl})`).join('; ');
     chunks.push({
         id: 'projects-summary',
@@ -160,7 +225,7 @@ const chunkPortfolioData = (data) => {
     });
 
     data.projects.forEach(project => {
-        const projectText = `Project: ${project.title}. Description: ${project.description}. Technologies: ${project.technologies.join(', ')}. Features: ${project.features.join(', ')}. Results: ${project.results.map(r => r.metric + ': ' + r.value).join(', ')}. Links: GitHub (${project.github}), Live Demo (${project.link || project.demoUrl}).`;
+        const projectText = `Project: ${project.title}. Description: ${project.description}. Technologies: ${project.technologies ? project.technologies.join(', ') : ''}. Features: ${project.features ? project.features.join(', ') : ''}. Results: ${project.results ? project.results.map(r => r.metric + ': ' + r.value).join(', ') : ''}. Links: GitHub (${project.github}), Live Demo (${project.link || project.demoUrl}).`;
         chunks.push({
             id: `project-${project.id}`,
             text: projectText,
@@ -220,12 +285,37 @@ function log(msg) {
 }
 
 // --- API CALL ---
-const OUTPUT_FILE = path.resolve(process.cwd(), 'src/data/embeddings.json');
-
 async function generateEmbeddings() {
     log('Starting embedding generation...');
 
-    const chunks = chunkPortfolioData(portfolioData);
+    // 1. Determine Context Source
+    let customContext = '';
+    const supabaseContext = await fetchSupabaseContext();
+
+    if (supabaseContext) {
+        // PRIORITY: Use Supabase Context ONLY if available
+        customContext = supabaseContext;
+        log('Using Supabase System Prompt.');
+    } else {
+        // FALLBACK: Use Local File
+        log('Supabase System Prompt not found. Using local customContext.ts.');
+        const customContextPath = path.resolve(process.cwd(), 'src/data/customContext.ts');
+        try {
+            const fileContent = fs.readFileSync(customContextPath, 'utf8');
+            const match = fileContent.match(/export const customContext = `([\s\S]*?)`;/);
+            if (match && match[1]) {
+                customContext = match[1];
+            }
+        } catch (e) {
+            console.error('Error reading local customContext.ts:', e.message);
+        }
+    }
+
+    // 2. Fetch Portfolio Data (Supabase with Local Fallback)
+    const portfolioData = await fetchPortfolioData();
+
+    // 3. Chunk Data
+    const chunks = chunkPortfolioData(portfolioData, customContext);
     log(`Generated ${chunks.length} chunks from portfolio data.`);
 
     const embeddedChunks = [];
@@ -278,9 +368,38 @@ async function generateEmbeddings() {
         }
     }
 
-    fs.writeFileSync(OUTPUT_FILE, JSON.stringify(embeddedChunks, null, 2));
-    log(`Successfully saved ${embeddedChunks.length} embeddings to ${OUTPUT_FILE}`);
-    fs.writeFileSync(path.resolve(process.cwd(), 'src/scripts/success.txt'), 'done');
+    // --- UPLOAD TO SUPABASE ---
+    log(`Uploading ${embeddedChunks.length} embeddings to Supabase...`);
+
+    // Clear existing documents first
+    const { error: deleteError } = await supabase.from('documents').delete().neq('id', 0);
+    if (deleteError) {
+        console.error('Error clearing old documents (Check RLS policies):', deleteError.message);
+    } else {
+        log('Cleared old documents from Supabase.');
+    }
+
+    // Prepare data for insertion
+    const rows = embeddedChunks.map(chunk => ({
+        content: chunk.text,
+        metadata: chunk.metadata || {},
+        embedding: chunk.embedding
+    }));
+
+    // Insert in batches
+    const BATCH_SIZE = 50;
+    for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+        const batch = rows.slice(i, i + BATCH_SIZE);
+        const { error } = await supabase.from('documents').insert(batch);
+
+        if (error) {
+            console.error(`Error inserting batch ${i} (Check RLS policies):`, error.message);
+        } else {
+            log(`Inserted batch ${i} to ${i + batch.length}`);
+        }
+    }
+
+    log('✅ Successfully updated Supabase embeddings!');
 }
 
 generateEmbeddings();

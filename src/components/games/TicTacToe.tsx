@@ -18,7 +18,7 @@ export const TicTacToe = ({ onBack }: TicTacToeProps) => {
   const [board, setBoard] = useState<Board>(Array(9).fill(null));
   const [winner, setWinner] = useState<Player>(null);
   const [gameOver, setGameOver] = useState(false);
-  const [currentPlayer, setCurrentPlayer] = useState<'X' | 'O'>(() => 
+  const [currentPlayer, setCurrentPlayer] = useState<'X' | 'O'>(() =>
     Math.random() < 0.5 ? 'X' : 'O' // Random first player
   );
   const [gameMode, setGameMode] = useState<GameMode>('friend'); // Default to friend mode
@@ -113,7 +113,7 @@ export const TicTacToe = ({ onBack }: TicTacToeProps) => {
 
   const handleClick = (index: number) => {
     if (board[index] || gameOver || isComputerThinking) return;
-    
+
     // In friend mode, check if it's the right player's turn
     if (gameMode === 'friend') {
       if (board[index] !== null) return;
@@ -123,11 +123,11 @@ export const TicTacToe = ({ onBack }: TicTacToeProps) => {
       }
       return;
     }
-    
+
     // In computer mode, only allow player to move on their turn
     if (gameMode === 'computer' && currentPlayer !== playerSymbol) return;
     if (board[index] !== null) return;
-    
+
     const moveMade = makeMove(index, playerSymbol);
     if (!moveMade) {
       // Switch to computer's turn (opposite symbol)
@@ -148,7 +148,7 @@ export const TicTacToe = ({ onBack }: TicTacToeProps) => {
     if (gameMode === 'computer' && currentPlayer === computerSymbol && !gameOver && !isComputerThinkingRef.current) {
       isComputerThinkingRef.current = true;
       setIsComputerThinking(true);
-      
+
       // Add a small delay to make it feel more natural
       computerMoveTimeoutRef.current = setTimeout(() => {
         // Read current board state using functional update
@@ -157,7 +157,7 @@ export const TicTacToe = ({ onBack }: TicTacToeProps) => {
           if (computerMove >= 0) {
             const newBoard = [...currentBoard];
             newBoard[computerMove] = computerSymbol;
-            
+
             const gameWinner = checkWinner(newBoard);
             if (gameWinner) {
               setWinner(gameWinner);
@@ -167,7 +167,7 @@ export const TicTacToe = ({ onBack }: TicTacToeProps) => {
             } else {
               setCurrentPlayer(playerSymbol); // Switch back to player's turn
             }
-            
+
             isComputerThinkingRef.current = false;
             setIsComputerThinking(false);
             return newBoard;
@@ -205,7 +205,7 @@ export const TicTacToe = ({ onBack }: TicTacToeProps) => {
     setBoard(Array(9).fill(null));
     setWinner(null);
     setGameOver(false);
-    
+
     // Set initial player based on mode
     if (gameMode === 'computer') {
       // In computer mode, player is X, computer is O
@@ -225,7 +225,7 @@ export const TicTacToe = ({ onBack }: TicTacToeProps) => {
   const handleModeChange = (checked: boolean) => {
     const newMode: GameMode = checked ? 'computer' : 'friend';
     setGameMode(newMode);
-    
+
     // Reset game when switching modes
     if (computerMoveTimeoutRef.current) {
       clearTimeout(computerMoveTimeoutRef.current);
@@ -235,7 +235,7 @@ export const TicTacToe = ({ onBack }: TicTacToeProps) => {
     setBoard(Array(9).fill(null));
     setWinner(null);
     setGameOver(false);
-    
+
     // Set initial player based on mode
     if (newMode === 'computer') {
       // In computer mode, player is X, computer is O
@@ -254,99 +254,125 @@ export const TicTacToe = ({ onBack }: TicTacToeProps) => {
 
   const renderSquare = (index: number) => {
     const computerSymbol = playerSymbol === 'X' ? 'O' : 'X';
-    const isDisabled = board[index] !== null || gameOver || isComputerThinking || 
-                       (gameMode === 'computer' && currentPlayer !== playerSymbol);
+    const isDisabled = board[index] !== null || gameOver || isComputerThinking ||
+      (gameMode === 'computer' && currentPlayer !== playerSymbol);
+
+    // Determine color based on symbol
+    const symbolColor = board[index] === 'X' ? 'text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]' : 'text-fuchsia-500 drop-shadow-[0_0_8px_rgba(217,70,239,0.8)]';
+
     return (
-      <Button
+      <motion.button
         key={index}
-        variant="outline"
-        className="w-20 h-20 text-2xl font-bold hover:bg-accent/10 border-border"
+        whileHover={{ scale: isDisabled ? 1 : 1.05, backgroundColor: isDisabled ? 'transparent' : 'rgba(34, 211, 238, 0.1)' }}
+        whileTap={{ scale: isDisabled ? 1 : 0.95 }}
+        className={`w-24 h-24 text-4xl font-bold border-2 border-cyan-900/50 rounded-xl flex items-center justify-center transition-all duration-300 ${isDisabled ? 'cursor-default' : 'cursor-pointer hover:border-cyan-500/50'}`}
         onClick={() => handleClick(index)}
         disabled={isDisabled}
       >
-        {board[index]}
-      </Button>
+        {board[index] && (
+          <motion.span
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+            className={symbolColor}
+          >
+            {board[index]}
+          </motion.span>
+        )}
+      </motion.button>
     );
   };
 
   return (
     <div className="w-full max-w-2xl mx-auto p-6">
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="space-y-6"
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="relative"
       >
-        <div className="flex items-center justify-between">
-          <Button variant="ghost" onClick={onBack} className="flex items-center gap-2">
-            <ArrowLeft className="w-4 h-4" />
-            Back to Games
-          </Button>
-          <Button variant="outline" onClick={resetGame} className="flex items-center gap-2">
-            <RotateCcw className="w-4 h-4" />
-            Reset
-          </Button>
-        </div>
+        {/* Neon Glow Background */}
+        <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-fuchsia-500 rounded-2xl blur opacity-20 animate-pulse" />
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-center text-2xl">Tic-Tac-Toe</CardTitle>
+        <Card className="relative bg-black/90 border-cyan-500/30 backdrop-blur-xl shadow-2xl overflow-hidden">
+          <CardHeader className="border-b border-cyan-500/10 pb-4">
+            <div className="flex items-center justify-between">
+              <Button variant="ghost" onClick={onBack} className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-950/30">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back
+              </Button>
+              <CardTitle className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-fuchsia-500 bg-clip-text text-transparent">
+                NEON TIC-TAC-TOE
+              </CardTitle>
+              <Button variant="outline" onClick={resetGame} className="border-cyan-500/30 text-cyan-400 hover:bg-cyan-950/30">
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Reset
+              </Button>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-6">
+
+          <CardContent className="space-y-8 pt-8">
             {/* Game Mode Toggle */}
-            <div className="flex items-center justify-center gap-3 p-4 bg-secondary/50 rounded-lg">
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-muted-foreground" />
-                <Label htmlFor="game-mode" className="text-sm font-medium">
-                  Friend
-                </Label>
-              </div>
-              <Switch
-                id="game-mode"
-                checked={gameMode === 'computer'}
-                onCheckedChange={handleModeChange}
-              />
-              <div className="flex items-center gap-2">
-                <Bot className="h-4 w-4 text-muted-foreground" />
-                <Label htmlFor="game-mode" className="text-sm font-medium">
-                  Computer
-                </Label>
+            <div className="flex justify-center">
+              <div className="flex items-center gap-4 p-2 bg-black/50 border border-cyan-500/20 rounded-full">
+                <div className={`flex items-center gap-2 px-4 py-1.5 rounded-full transition-all ${gameMode === 'friend' ? 'bg-cyan-500/20 text-cyan-400' : 'text-muted-foreground'}`}>
+                  <Users className="h-4 w-4" />
+                  <span className="text-sm font-medium">Friend</span>
+                </div>
+                <Switch
+                  checked={gameMode === 'computer'}
+                  onCheckedChange={handleModeChange}
+                  className="data-[state=checked]:bg-fuchsia-500 data-[state=unchecked]:bg-cyan-500"
+                />
+                <div className={`flex items-center gap-2 px-4 py-1.5 rounded-full transition-all ${gameMode === 'computer' ? 'bg-fuchsia-500/20 text-fuchsia-400' : 'text-muted-foreground'}`}>
+                  <Bot className="h-4 w-4" />
+                  <span className="text-sm font-medium">AI Bot</span>
+                </div>
               </div>
             </div>
 
-            <div className="text-center">
+            {/* Status Display */}
+            <div className="text-center min-h-[3rem] flex items-center justify-center">
               {winner ? (
-                <p className="text-xl font-semibold text-accent">
-                  {gameMode === 'computer' 
-                    ? (winner === playerSymbol ? '🎉 You win!' : '🤖 Computer wins!')
-                    : `🎉 Player ${winner} wins!`}
-                </p>
+                <motion.div
+                  initial={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-fuchsia-500 bg-clip-text text-transparent drop-shadow-lg"
+                >
+                  {gameMode === 'computer'
+                    ? (winner === playerSymbol ? '🎉 VICTORY! 🎉' : '🤖 SYSTEM WINS 🤖')
+                    : `🎉 PLAYER ${winner} WINS! 🎉`}
+                </motion.div>
               ) : gameOver ? (
                 <p className="text-xl font-semibold text-muted-foreground">
-                  It's a draw! 🤝
+                  GAME DRAW 🤝
                 </p>
               ) : isComputerThinking ? (
-                <p className="text-lg text-foreground">
-                  🤖 Computer is thinking...
-                </p>
+                <div className="flex items-center gap-2 text-fuchsia-400">
+                  <Bot className="w-5 h-5 animate-bounce" />
+                  <span className="font-mono">COMPUTING MOVE...</span>
+                </div>
               ) : (
-                <p className="text-lg text-foreground">
-                  {gameMode === 'computer' 
-                    ? <>Your turn! <span className="font-bold text-accent">(You are {playerSymbol})</span></>
-                    : <>Player <span className="font-bold text-accent">{currentPlayer}</span>'s turn</>}
-                </p>
+                <div className="flex items-center gap-2 text-lg">
+                  <span className="text-muted-foreground">TURN:</span>
+                  <span className={`font-bold text-2xl ${currentPlayer === 'X' ? 'text-cyan-400' : 'text-fuchsia-500'}`}>
+                    {currentPlayer}
+                  </span>
+                  {gameMode === 'computer' && currentPlayer === playerSymbol && (
+                    <span className="text-xs ml-2 px-2 py-0.5 rounded border border-cyan-500/30 text-cyan-400 bg-cyan-950/30">YOU</span>
+                  )}
+                </div>
               )}
             </div>
 
-            <div className="grid grid-cols-3 gap-2 justify-center max-w-xs mx-auto">
+            {/* Game Grid */}
+            <div className="grid grid-cols-3 gap-3 justify-center max-w-xs mx-auto p-4 bg-black/50 rounded-2xl border border-cyan-900/30 shadow-inner">
               {Array.from({ length: 9 }, (_, i) => renderSquare(i))}
             </div>
 
-            <div className="text-center text-sm text-muted-foreground">
-              {isComputerThinking 
-                ? 'Computer is making its move...' 
-                : gameMode === 'computer'
-                ? `Click on any empty square to make your move (You are ${playerSymbol}, Computer is ${playerSymbol === 'X' ? 'O' : 'X'})`
-                : 'Click on any empty square to make your move (Take turns between X and O)'}
+            <div className="text-center text-xs text-muted-foreground/60 font-mono">
+              {isComputerThinking
+                ? 'ANALYZING PROBABILITIES...'
+                : 'SELECT A SECTOR TO INITIATE SEQUENCE'}
             </div>
           </CardContent>
         </Card>
