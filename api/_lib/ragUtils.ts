@@ -96,13 +96,14 @@ export const chunkPortfolioData = (data: PortfolioData): Chunk[] => {
 // Simple RAG implementation: Returns all chunks for now (Small context fits in Gemini 1.5 Flash)
 // In a larger app, we would use embeddings and cosine similarity here.
 import { createClient } from '@supabase/supabase-js';
-import { google } from '@ai-sdk/google';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { embed } from 'ai';
 
 export const findRelevantChunks = async (query: string): Promise<Chunk[]> => {
     try {
         const supabaseUrl = process.env.VITE_SUPABASE_URL;
         const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
+        const googleApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 
         if (!supabaseUrl || !supabaseKey) {
             console.warn('Supabase keys missing in ragUtils, falling back to local.');
@@ -110,6 +111,11 @@ export const findRelevantChunks = async (query: string): Promise<Chunk[]> => {
         }
 
         const supabase = createClient(supabaseUrl, supabaseKey);
+
+        // Initialize Google Provider with explicit key
+        const google = createGoogleGenerativeAI({
+            apiKey: googleApiKey,
+        });
 
         // 1. Generate embedding for the query
         const { embedding } = await embed({
