@@ -2,7 +2,7 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenAI } from '@ai-sdk/openai';
 import { streamText } from 'ai';
 import { createClient } from '@supabase/supabase-js';
-import { findRelevantChunks } from './_lib/ragUtils';
+import { findRelevantChunks } from './_lib/ragUtils.js';
 
 // Initialize Supabase Client
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
@@ -31,7 +31,7 @@ const getSystemPrompt = async (context: string) => {
     PORTFOLIO OWNER IDENTITY:
     - Name: Sudhakar Reddy Katam
     - Role: Aspiring Software Engineer | Building with AI & Web
-    - Bio: Computer Science graduate passionate about building web and mobile applications. Expert in React, Node.js, and AI integration.
+    - Bio: Computer Science graduate passionate about building web and mobile applications. built projects with React, Node.js, and AI integration.
     - Location: Hyderabad, Telangana, India
     `;
 

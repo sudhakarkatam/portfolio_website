@@ -1,4 +1,4 @@
-import { PortfolioData, ProjectDetail } from "./types";
+import { PortfolioData, ProjectDetail } from "./types.js";
 
 export const portfolioData: PortfolioData = {
     name: "Sudhakar Reddy Katam",

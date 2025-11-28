@@ -1,6 +1,6 @@
-import { PortfolioData } from "./types";
-import { customContext } from "./customContext";
-import { portfolioData } from "./portfolioData";
+import { PortfolioData } from "./types.js";
+import { customContext } from "./customContext.js";
+import { portfolioData } from "./portfolioData.js";
 
 export interface Chunk {
     id: string;

@@ -1,7 +1,7 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { streamText } from "ai";
 import { createClient } from "@supabase/supabase-js";
-import { findRelevantChunks } from './_lib/ragUtils';
+import { findRelevantChunks } from './_lib/ragUtils.js';
 
 // Initialize Supabase Client
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
