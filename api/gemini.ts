@@ -189,7 +189,38 @@ export default async function handler(req: any, res: any) {
         });
 
         // 4. Pipe Stream to Response
-        (result as any).pipeDataStreamToResponse(res);
+        try {
+            // Try Vercel's pipeDataStreamToResponse first (production)
+            if (typeof (result as any).pipeDataStreamToResponse === 'function') {
+                (result as any).pipeDataStreamToResponse(res);
+            } else {
+                // Fallback for non-Vercel environments or when method is missing
+                const response = result.toTextStreamResponse();
+
+                // Copy headers
+                response.headers.forEach((value: string, key: string) => {
+                    res.setHeader(key, value);
+                });
+
+                if (response.body) {
+                    const reader = response.body.getReader();
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        if (value) {
+                            res.write(value);
+                        }
+                    }
+                    res.end();
+                } else {
+                    res.end();
+                }
+            }
+        } catch (streamError: any) {
+            console.error('Error streaming response:', streamError);
+            res.status(500).json({ error: 'Stream processing failed' });
+        }
 
     } catch (error: any) {
         console.error('Error in Gemini API:', error);
