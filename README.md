@@ -1,4 +1,4 @@
-# 🚀 Chatty CV - AI-Powered Portfolio
+# 🚀 Sudhakar katam - AI-Powered Portfolio
 
 A modern, secure portfolio with AI chat functionality and protected API keys.
 

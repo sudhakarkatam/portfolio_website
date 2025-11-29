@@ -34,14 +34,11 @@ const openrouter = createOpenAI({
 });
 
 // Helper for System Prompt
-const getSystemPrompt = async (context: string) => {
+const getSystemPrompt = async (context: string, model?: string) => {
     // CORE IDENTITY - HARDCODED SOURCE OF TRUTH
     const coreIdentity = `
     PORTFOLIO OWNER IDENTITY:
     - Name: Sudhakar Reddy Katam
-    - Role: Aspiring Software Engineer | Building with AI & Web
-    - Bio: Computer Science graduate passionate about building web and mobile applications. Expert in React, Node.js, and AI integration.
-    - Location: Hyderabad, Telangana, India
     `;
 
     let customInstructions = `
@@ -57,16 +54,28 @@ const getSystemPrompt = async (context: string) => {
 
     // 1. Fetch custom instructions from Supabase (if available)
     if (supabase) {
-        const { data, error } = await supabase
-            .from("app_settings")
-            .select("value")
-            .eq("key", "system_prompt")
-            .single();
+        // Fetch Global Context (app_settings) AND Model Specific Context (model_contexts)
+        const [appSettings, modelContexts] = await Promise.all([
+            supabase.from("app_settings").select("value").eq("key", "system_prompt").single(),
+            supabase.from("model_contexts").select("*")
+        ]);
 
-        if (data && data.value) {
-            customInstructions = data.value;
-        } else if (error) {
-            console.warn("⚠️ Failed to fetch system_prompt from Supabase:", error.message);
+        // Apply Global Context
+        if (appSettings.data && appSettings.data.value) {
+            customInstructions = appSettings.data.value;
+        } else if (appSettings.error) {
+            console.warn("⚠️ Failed to fetch system_prompt from Supabase:", appSettings.error.message);
+        }
+
+        // Apply Model Specific Context
+        if (modelContexts.data && model) {
+            const provider = (model.includes("gemini")) ? "gemini" : "openrouter";
+            const specificContext = modelContexts.data.find((c: any) => c.provider === provider)?.content;
+
+            if (specificContext) {
+                console.log(`Using specific context for ${model} (${provider})`);
+                customInstructions += `\n\n### MODEL SPECIFIC INSTRUCTIONS (${provider.toUpperCase()}):\n${specificContext}`;
+            }
         }
     }
 
@@ -109,10 +118,12 @@ Instructions:
         - **LINKS**: If a GitHub or Demo link is missing in the context, **OMIT IT**. DO NOT write "(Placeholder)" or make up a link.
         - **HIGHLIGHT**: If the context mentions a "Current Focus", "Learning Goal", or "Key Achievement", highlight it in a blockquote:
           > 🚀 **Current Focus:** [Goal]
-    13. **SUGGESTIONS**:
-        - Provide 3 **NEW** follow-up questions.
-        - **PRIORITY**: If discussing projects, the suggestions **MUST** be specific project names to explore (e.g., "Tell me about [Project Name]").
-        - Keep them short and clickable (max 5-6 words).
+    13. **NO HALLUCINATIONS / INVENTED DATA**:
+        - **CRITICAL**: You are strictly forbidden from inventing testimonials, metrics, specific numbers, or project details that are NOT in the context.
+        - If the user asks about something not in your context (e.g., "What did Rohan say?", "Tell me about the Mental Health Buddy"), you MUST say:
+          "I don't have specific details about that in my current records. However, I can tell you about [Real Project A] or [Real Skill B]."
+        - **NEVER** make up quotes or success stories.
+        - If you are unsure, admit it. It is better to be honest than to hallucinate.
 `;
     // 3. Add Suggestions Instructions
     systemPrompt += `
@@ -123,6 +134,31 @@ Instructions:
    - If discussing skills, the buttons can be "Frontend", "Backend", "AI".
    - Do NOT use generic labels like "View Projects" for buttons if you can use specific names.
    - The button text MUST be the exact input you want the user to send.
+   - **FORMAT**: Place the button suggestions at the VERY END of your response, wrapped in double brackets like this:
+     [[Suggestion 1, Suggestion 2, Suggestion 3]]
+   - **LINKS IN BUTTONS**: If you want a button to open a URL (like a demo or repo), format it as a markdown link inside the brackets:
+     [[[View Demo](https://demo.com), [GitHub Repo](https://github.com/user/repo), Tell me more]]
+
+IMPORTANT FOR OPENROUTER MODELS (DeepSeek, etc.):
+- **NO THINKING/REASONING OUTPUT**: Do NOT output your internal thought process, "Okay, let's break down...", or "Here's how I'll answer...". START YOUR RESPONSE DIRECTLY with the answer.
+- **IMAGES**: You MUST render images using markdown \`![Alt Text](url)\` ONLY if an image URL is explicitly provided in the context.
+  - **VERIFY FIRST**: Before listing projects that you "have images for", CHECK the context. If the context says "Image: N/A" or is missing an image URL, DO NOT claim to have it.
+  - **DO NOT HALLUCINATE IMAGES**. If the context says "Image: N/A" or has no image, DO NOT show one.
+  - **DO NOT USE PLACEHOLDERS** like \`/placeholder.svg\` unless it is in the context.
+- **LINKS**: You MUST use the EXACT links provided in the context (e.g., GitHub, Live Demo).
+  - **DO NOT HALLUCINATE LINKS**. If a link is missing, do not invent one.
+- **SUGGESTIONS (The buttons at the end)**:
+  - **TYPE 1: QUERIES (Filters/Questions)** -> Use **PLAIN TEXT**.
+    - Use this for: "Show React Projects", "Tell me about experience", "What are your skills?".
+    - Format: \`[[Show React Projects, Tell me more]]\`
+    - Result: Clicking sends "Show React Projects" to chat.
+  - **TYPE 2: LINKS (External URLs)** -> Use **MARKDOWN LINKS**.
+    - Use this for: "GitHub Repo", "Live Demo", "View Project".
+    - **CRITICAL**: You MUST include the URL from the context.
+    - Format: \`[[[GitHub Repo](https://github.com/...), [Live Demo](https://demo.com)]]\`
+    - Result: Clicking opens the URL in a new tab.
+  - **MIXED EXAMPLE**:
+    - \`[[Show React Projects, [GitHub Repo](https://github.com/...), [Live Demo](https://demo.com)]]\`
 `;
     return systemPrompt;
 };
@@ -203,11 +239,106 @@ Deno.serve(async (req) => {
         const userQuery = lastMessage.content;
 
         // 1. Retrieve relevant chunks (RAG)
-        const relevantChunks = await findRelevantChunks(userQuery);
-        const context = relevantChunks.map(chunk => chunk.text).join('\n\n');
+        let relevantChunks = await findRelevantChunks(userQuery);
+        let context = "";
 
-        // 2. Get System Prompt
-        const systemPrompt = await getSystemPrompt(context);
+        if (relevantChunks.length > 0) {
+            context = relevantChunks.map(chunk => chunk.text).join('\n\n');
+        } else {
+            console.warn("⚠️ RAG returned 0 chunks. Using FALLBACK to fetch ALL data from Supabase.");
+
+            // FALLBACK: Fetch ALL data directly from Supabase
+            if (supabase) {
+                const [projects, skills, experience, traits, contact, customImages, appSettings, modelContexts] = await Promise.all([
+                    supabase.from('projects').select('*').order('created_at', { ascending: false }),
+                    supabase.from('skills').select('*'),
+                    supabase.from('experience').select('*').order('created_at', { ascending: false }),
+                    supabase.from('personal_traits').select('*'),
+                    supabase.from('contact_info').select('*'),
+                    supabase.from('custom_images').select('*').order('created_at', { ascending: false }),
+                    supabase.from('app_settings').select('*'),
+                    supabase.from('model_contexts').select('*')
+                ]);
+
+                let fallbackContextParts = [];
+
+                // Custom Context (from app_settings - GLOBAL)
+                if (appSettings.data) {
+                    const customContext = appSettings.data.find((s: any) => s.key === 'system_prompt')?.value;
+                    if (customContext) {
+                        fallbackContextParts.push(`## GLOBAL CUSTOM CONTEXT:\n${customContext}`);
+                    }
+                }
+
+                // Model Specific Context (from model_contexts)
+                if (modelContexts.data) {
+                    const provider = (model && model.includes('gemini')) ? 'gemini' : 'openrouter';
+                    const modelContext = modelContexts.data.find((c: any) => c.provider === provider)?.content;
+                    if (modelContext) {
+                        fallbackContextParts.push(`## MODEL SPECIFIC CONTEXT (${provider}):\n${modelContext}`);
+                    }
+                }
+
+                // Projects
+                if (projects.data) {
+                    const projectTexts = projects.data.map((p: any) => `
+Project: ${p.title}
+Description: ${p.description}
+Technologies: ${p.technologies?.join(', ') || ''}
+Features: ${p.features?.join(', ') || ''}
+Results: ${p.results?.map((r: any) => `${r.metric}: ${r.value}`).join(', ') || ''}
+Links: GitHub (${p.github}), Live Demo (${p.link || p.demo_url})
+Image: ${p.image || 'N/A'}
+`).join('\n');
+                    fallbackContextParts.push(`## PROJECTS:\n${projectTexts}`);
+                }
+
+                // Skills
+                if (skills.data) {
+                    const skillList = skills.data.map((s: any) => `${s.name} (${s.category})`).join(', ');
+                    fallbackContextParts.push(`## SKILLS:\n${skillList}`);
+                }
+
+                // Experience
+                if (experience.data) {
+                    const expTexts = experience.data.map((exp: any) => `
+Role: ${exp.role} at ${exp.company}
+Period: ${exp.period}
+Description: ${exp.description}
+Technologies: ${exp.technologies?.join(', ') || ''}
+`).join('\n');
+                    fallbackContextParts.push(`## EXPERIENCE:\n${expTexts}`);
+                }
+
+                // Traits
+                if (traits.data) {
+                    const strengths = traits.data.filter((t: any) => t.type === 'strength').map((t: any) => t.value).join(', ');
+                    const hobbies = traits.data.filter((t: any) => t.type === 'hobby').map((t: any) => t.value).join(', ');
+                    fallbackContextParts.push(`## TRAITS:\nStrengths: ${strengths}\nHobbies: ${hobbies}`);
+                }
+
+                // Contact
+                if (contact.data) {
+                    const contactText = contact.data.map((c: any) => `${c.platform}: ${c.value}`).join('\n');
+                    fallbackContextParts.push(`## CONTACT:\n${contactText}`);
+                }
+
+                // Custom Images
+                if (customImages.data) {
+                    const imgTexts = customImages.data.map((img: any) => `
+Image Description: ${img.description}
+Tags: ${img.tags?.join(', ') || ''}
+Image URL: ${img.url}
+`).join('\n');
+                    fallbackContextParts.push(`## CUSTOM IMAGES:\n${imgTexts}`);
+                }
+
+                context = fallbackContextParts.join('\n\n');
+            }
+        }
+
+        // 2. Get System Prompt (with Model-Specific Logic)
+        const systemPrompt = await getSystemPrompt(context, model);
 
         // 3. Select Model and Generate Response
         if (model && !model.includes('gemini')) {

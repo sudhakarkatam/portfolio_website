@@ -39,7 +39,7 @@ export const chunkPortfolioData = (data: PortfolioData): Chunk[] => {
     });
 
     data.projects.forEach(project => {
-        const projectText = `Project: ${project.title}. Description: ${project.description}. Technologies: ${project.technologies.join(', ')}. Features: ${project.features?.join(', ') || 'N/A'}. Results: ${project.results?.map(r => r.metric + ': ' + r.value).join(', ') || 'N/A'}. Links: GitHub (${project.github}), Live Demo (${project.link || project.demoUrl}).`;
+        const projectText = `Project: ${project.title}. Description: ${project.description}. Technologies: ${project.technologies.join(', ')}. Features: ${project.features?.join(', ') || 'N/A'}. Results: ${project.results?.map(r => r.metric + ': ' + r.value).join(', ') || 'N/A'}. Links: GitHub (${project.github}), Live Demo (${project.link || project.demoUrl}). Image: ${project.image || 'N/A'}.`;
         chunks.push({
             id: `project-${project.id}`,
             text: projectText,

@@ -17,24 +17,37 @@ export const FollowUpSuggestions = ({ suggestions, onSelect }: FollowUpSuggestio
       transition={{ delay: 0.3 }}
       className="mt-4 flex flex-wrap gap-2"
     >
-      {suggestions.map((suggestion, index) => (
-        <motion.div
-          key={index}
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.4 + index * 0.05 }}
-        >
-          <Button
-            variant="outline"
-            size="sm"
-            className="bg-accent/10 hover:bg-accent/20 border-accent/30 text-accent hover:text-accent text-xs md:text-sm h-7 md:h-8 px-2 md:px-3 backdrop-blur-sm transition-all duration-300 touch-manipulation"
-            onClick={() => onSelect(suggestion)}
+      {suggestions.map((suggestion, index) => {
+        // Check if suggestion is a markdown link: [Label](url)
+        const linkMatch = suggestion.match(/\[(.*?)\]\((.*?)\)/);
+        const label = linkMatch ? linkMatch[1] : suggestion;
+        const url = linkMatch ? linkMatch[2] : null;
+
+        return (
+          <motion.div
+            key={index}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.4 + index * 0.05 }}
           >
-            <Sparkles className="mr-1 h-3 w-3" />
-            {suggestion}
-          </Button>
-        </motion.div>
-      ))}
+            <Button
+              variant="outline"
+              size="sm"
+              className="bg-accent/10 hover:bg-accent/20 border-accent/30 text-accent hover:text-accent text-xs md:text-sm h-7 md:h-8 px-2 md:px-3 backdrop-blur-sm transition-all duration-300 touch-manipulation"
+              onClick={() => {
+                if (url) {
+                  window.open(url, '_blank', 'noopener,noreferrer');
+                } else {
+                  onSelect(suggestion);
+                }
+              }}
+            >
+              <Sparkles className="mr-1 h-3 w-3" />
+              {label}
+            </Button>
+          </motion.div>
+        );
+      })}
     </motion.div>
   );
 };

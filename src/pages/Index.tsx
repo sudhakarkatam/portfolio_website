@@ -10,6 +10,7 @@ import {
   Eye,
   Mic,
   MicOff,
+  Square,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,6 +52,7 @@ const Index = () => {
     isLoading,
     append,
     setInput,
+    stop,
   } = useChat({
     api: apiEndpoint,
     body: {
@@ -202,11 +204,31 @@ const Index = () => {
       if (isDiceRoll && msg.role === "assistant") component = <DiceRoll />;
       if (isCoinToss && msg.role === "assistant") component = <CoinToss />;
 
+      // Parse suggestions from the content (looking for [[Suggestion 1, Suggestion 2]])
+      const suggestionMatch = lowerContent.match(/\[\[(.*?)\]\]/);
+      let displayContent = msg.content;
+
+      if (suggestionMatch) {
+        const rawSuggestions = suggestionMatch[1];
+        // Split by comma, but handle commas inside brackets if any (simple split for now)
+        // We need to handle [Link](url) format
+        suggestions = rawSuggestions.split(',').map(s => {
+          const clean = s.trim().replace(/^['"]|['"]$/g, '');
+          return clean;
+        });
+
+        // Remove the suggestion block from the display content
+        const originalMatch = msg.content.match(/\[\[(.*?)\]\]/);
+        if (originalMatch) {
+          displayContent = msg.content.replace(originalMatch[0], '').trim();
+        }
+      }
+
       // Map to our Message type
       return {
         id: msg.id,
         role: msg.role as "user" | "assistant",
-        content: msg.content,
+        content: displayContent, // Use cleaned content
         timestamp: msg.createdAt || new Date(),
         component,
         suggestions,
@@ -652,19 +674,29 @@ const Index = () => {
                           </Button>
                         </div>
 
-                        {/* Right side - Model Selector and Send Button - Bottom line of input area */}
+                        {/* Right side - Send/Stop Button - Bottom line of input area */}
                         <div className="absolute right-3 bottom-3 flex items-center gap-2 z-10">
                           <ModelSelector
                             selectedModel={selectedModel}
                             onModelChange={setSelectedModel}
                           />
-                          <Button
-                            onClick={() => handleSendMessage()}
-                            disabled={!input.trim() || isLoading}
-                            className="bg-accent hover:bg-accent/90 shrink-0 h-8 w-8 md:h-9 md:w-9 rounded-lg touch-manipulation"
-                          >
-                            <ArrowUp className="h-4 w-4 md:h-4 md:w-4" />
-                          </Button>
+                          {isLoading ? (
+                            <Button
+                              onClick={() => stop()}
+                              className="bg-red-500 hover:bg-red-600 shrink-0 h-8 w-8 md:h-9 md:w-9 rounded-lg touch-manipulation animate-in fade-in zoom-in duration-200"
+                              title="Stop generating"
+                            >
+                              <Square className="h-3 w-3 md:h-3.5 md:w-3.5 fill-current" />
+                            </Button>
+                          ) : (
+                            <Button
+                              onClick={() => handleSendMessage()}
+                              disabled={!input.trim()}
+                              className="bg-accent hover:bg-accent/90 shrink-0 h-8 w-8 md:h-9 md:w-9 rounded-lg touch-manipulation"
+                            >
+                              <ArrowUp className="h-4 w-4 md:h-4 md:w-4" />
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -718,11 +750,15 @@ const Index = () => {
                   />
                 </div>
                 <Button
-                  onClick={() => handleSendMessage()}
-                  disabled={!input.trim() || isLoading}
-                  className="bg-accent hover:bg-accent/90 shrink-0 h-9 w-9 md:h-10 md:w-10 lg:h-11 lg:w-11 touch-manipulation"
+                  onClick={() => isLoading ? stop() : handleSendMessage()}
+                  disabled={!input.trim() && !isLoading}
+                  className={`${isLoading ? "bg-red-500 hover:bg-red-600" : "bg-accent hover:bg-accent/90"} shrink-0 h-9 w-9 md:h-10 md:w-10 lg:h-11 lg:w-11 touch-manipulation transition-colors duration-200`}
                 >
-                  <ArrowUp className="h-4 w-4 md:h-4 md:w-4" />
+                  {isLoading ? (
+                    <Square className="h-3.5 w-3.5 md:h-4 md:w-4 fill-current" />
+                  ) : (
+                    <ArrowUp className="h-4 w-4 md:h-4 md:w-4" />
+                  )}
                 </Button>
               </div>
               {/* Model Selector - Below input box, right aligned */}
@@ -834,11 +870,15 @@ const Index = () => {
                   {/* Right side - Send Button - Bottom line of input area */}
                   <div className="absolute right-3 bottom-2.5 z-10 touch-manipulation">
                     <Button
-                      onClick={() => handleSendMessage()}
-                      disabled={!input.trim() || isLoading}
-                      className="bg-accent hover:bg-accent/90 shrink-0 h-8 w-8 rounded-lg touch-manipulation"
+                      onClick={() => isLoading ? stop() : handleSendMessage()}
+                      disabled={!input.trim() && !isLoading}
+                      className={`${isLoading ? "bg-red-500 hover:bg-red-600" : "bg-accent hover:bg-accent/90"} shrink-0 h-8 w-8 rounded-lg touch-manipulation transition-colors duration-200`}
                     >
-                      <ArrowUp className="h-4 w-4" />
+                      {isLoading ? (
+                        <Square className="h-3.5 w-3.5 fill-current" />
+                      ) : (
+                        <ArrowUp className="h-4 w-4" />
+                      )}
                     </Button>
                   </div>
                 </div>

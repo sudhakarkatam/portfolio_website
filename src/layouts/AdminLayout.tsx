@@ -35,8 +35,9 @@ const AdminLayout = () => {
         { icon: User, label: "Traits", path: "/admin/traits" },
         { icon: Phone, label: "Contact", path: "/admin/contact" },
         { icon: Mail, label: "Messages", path: "/admin/messages" },
-        { icon: Bot, label: "Chat Logs", path: "/admin/chat-logs" },
+        { icon: MessageSquare, label: "Chat Logs", path: "/admin/chat-logs" },
         { icon: ImageIcon, label: "Custom Images", path: "/admin/custom-images" },
+        { icon: Bot, label: "Model Contexts", path: "/admin/model-contexts" },
         { icon: Wrench, label: "Settings", path: "/admin/settings" },
     ];
 
