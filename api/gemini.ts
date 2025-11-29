@@ -195,7 +195,7 @@ export default async function handler(req: any, res: any) {
                 (result as any).pipeDataStreamToResponse(res);
             } else {
                 // Fallback for non-Vercel environments or when method is missing
-                const response = result.toTextStreamResponse();
+                const response = (result as any).toDataStreamResponse();
 
                 // Copy headers
                 response.headers.forEach((value: string, key: string) => {

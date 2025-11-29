@@ -322,7 +322,7 @@ export default async function handler(req: any, res: any) {
         (result as any).pipeDataStreamToResponse(res);
       } else {
         // Fallback for non-Vercel environments (e.g., local dev)
-        const response = (result as any).toTextStreamResponse();
+        const response = (result as any).toDataStreamResponse();
 
         // Copy headers from the stream response
         response.headers.forEach((value: string, key: string) => {

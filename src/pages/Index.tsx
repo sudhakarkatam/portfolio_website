@@ -38,9 +38,9 @@ const Index = () => {
   const [selectedModel, setSelectedModel] = useState("normal");
 
   const apiEndpoint = useMemo(() => {
-    const model = AVAILABLE_MODELS.find((m) => m.id === selectedModel);
-    return model?.provider === "openrouter" ? "/api/openrouter" : "/api/gemini";
-  }, [selectedModel]);
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    return `${supabaseUrl}/functions/v1/chat`;
+  }, []);
 
   const {
     messages: aiMessages,
