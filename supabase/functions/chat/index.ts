@@ -70,7 +70,7 @@ const fetchSystemContext = async (model?: string) => {
                 console.log("🐢 Redis Cache Empty. Fetching from DB...");
                 // Fetch from DB
                 const [settingsResult, contextsResult] = await Promise.all([
-                    supabase.from("app_settings").select("value").eq("key", "system_prompt").single(),
+                    supabase.from("app_settings").select("*").eq("key", "system_prompt"),
                     supabase.from("model_contexts").select("*")
                 ]);
 
@@ -91,7 +91,7 @@ const fetchSystemContext = async (model?: string) => {
     if (!appSettings && !modelContexts) {
         console.log("⚠️ Fetching from DB (Redis skipped)...");
         const [settingsResult, contextsResult] = await Promise.all([
-            supabase.from("app_settings").select("value").eq("key", "system_prompt").single(),
+            supabase.from("app_settings").select("*").eq("key", "system_prompt"),
             supabase.from("model_contexts").select("*")
         ]);
         appSettings = settingsResult;
@@ -121,8 +121,8 @@ const buildSystemPrompt = (context: string, appSettings: any, modelContexts: any
     `;
 
     // Apply Global Context
-    if (appSettings?.data && appSettings.data.value) {
-        customInstructions = appSettings.data.value;
+    if (appSettings?.data && appSettings.data.length > 0) {
+        customInstructions = appSettings.data[0].value;
     } else if (appSettings?.error) {
         console.warn("⚠️ Failed to fetch system_prompt from Supabase:", appSettings.error.message);
     }
