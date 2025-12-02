@@ -20,6 +20,7 @@ import ExperienceManager from "./pages/admin/ExperienceManager";
 import PersonalTraitsManager from "./pages/admin/PersonalTraitsManager";
 import ContactInfoManager from "./pages/admin/ContactInfoManager";
 import ModelContexts from "./pages/admin/ModelContexts";
+import CertificationsManager from "./pages/admin/CertificationsManager";
 
 // Import platform test utilities in development
 
@@ -54,6 +55,7 @@ const App = () => (
             <Route path="custom-images" element={<CustomImagesManager />} />
             <Route path="settings" element={<Settings />} />
             <Route path="model-contexts" element={<ModelContexts />} />
+            <Route path="certifications" element={<CertificationsManager />} />
           </Route>
 
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

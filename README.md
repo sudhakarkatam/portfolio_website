@@ -1,4 +1,4 @@
-# 🚀 Sudhakar katam - AI-Powered Portfolio
+# 🚀 Sudhakar Portfolio AI
 
 A modern, secure portfolio with AI chat functionality and protected API keys.
 

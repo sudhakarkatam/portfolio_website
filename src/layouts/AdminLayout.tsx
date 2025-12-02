@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, MessageSquare, LogOut, Menu, FolderGit2, Wrench, Mail, Bot, RefreshCw, Image as ImageIcon, Briefcase, User, Phone } from "lucide-react";
+import { LayoutDashboard, MessageSquare, LogOut, Menu, FolderGit2, Wrench, Mail, Bot, RefreshCw, Image as ImageIcon, Briefcase, User, Phone, Award } from "lucide-react";
 import { toast } from "sonner";
 
 const AdminLayout = () => {
@@ -38,6 +38,7 @@ const AdminLayout = () => {
         { icon: MessageSquare, label: "Chat Logs", path: "/admin/chat-logs" },
         { icon: ImageIcon, label: "Custom Images", path: "/admin/custom-images" },
         { icon: Bot, label: "Model Contexts", path: "/admin/model-contexts" },
+        { icon: Award, label: "Certifications", path: "/admin/certifications" },
         { icon: Wrench, label: "Settings", path: "/admin/settings" },
     ];
 

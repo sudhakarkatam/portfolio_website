@@ -798,7 +798,7 @@ export const CodeQuiz = ({ onBack }: CodeQuizProps) => {
               <div className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
               <div className="w-3 h-3 rounded-full bg-[#27c93f]" />
             </div>
-            <span className="ml-4 text-[#cccccc] text-xs">quiz.tsx — ChattyCV — Visual Studio Code</span>
+            <span className="ml-4 text-[#cccccc] text-xs">quiz.tsx — PortfolioAI — Visual Studio Code</span>
           </div>
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="sm" onClick={onBack} className="h-6 text-[#cccccc] hover:text-white hover:bg-[#505050]">
@@ -816,7 +816,7 @@ export const CodeQuiz = ({ onBack }: CodeQuizProps) => {
             </div>
             <div className="mt-2 flex-1 overflow-y-auto">
               <div className="px-2 py-1 text-[#e0e0e0] font-bold text-xs flex items-center gap-1">
-                <span className="text-[10px]">▼</span> CHATTY-CV
+                <span className="text-[10px]">▼</span> PORTFOLIO-AI
               </div>
               <div className="px-4 py-1 text-[#e0e0e0] bg-[#37373d] flex items-center gap-2 border-l-2 border-[#007acc]">
                 <span className="text-[#519aba] text-xs">TSX</span>

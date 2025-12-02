@@ -385,6 +385,27 @@ export const portfolioData: PortfolioData = {
     },
   ],
 
+  certifications: [
+    {
+      id: "1",
+      name: "Salesforce Developer Virtual Internship",
+      issuer: "SmartBridge (Powered by Salesforce)",
+      date: "June 2024",
+      url: "https://drive.google.com/file/d/1j2jyRZ1Q9HTowxMYL2YXSIgeg6gv_HEu/view?usp=sharing",
+      description:
+        "Completed intensive 2-month Salesforce development virtual internship focusing on CRM solutions, Apex programming, Lightning Web Components, and Visualforce.",
+    },
+    {
+      id: "2",
+      name: "AWS Cloud Virtual Internship",
+      issuer: "AICTE (All India Council for Technical Education)",
+      date: "July 2023",
+      url: "https://drive.google.com/file/d/1Ty2qzZyTdThHYfETXUPkxZw7cIQcs3TV/view?usp=sharing",
+      description:
+        "Completed comprehensive 3-month AWS cloud computing virtual internship covering cloud architecture, core services, security, and best practices.",
+    },
+  ],
+
   contact: {
     email: "sudhakarkatam777@gmail.com",
     github: "https://github.com/sudhakarkatam",

@@ -135,45 +135,51 @@ async function seedData() {
     console.log('🌱 Seeding Supabase data...');
 
     // 1. Seed Projects
-    console.log('Seeding Projects...');
-    const { error: projError } = await supabase.from('projects').upsert(portfolioData.projects);
-    if (projError) console.error('Error seeding projects:', projError);
-    else console.log('✅ Projects seeded');
+    // console.log('Seeding Projects...');
+    // const { error: projError } = await supabase.from('projects').upsert(portfolioData.projects);
+    // if (projError) console.error('Error seeding projects:', projError);
+    // else console.log('✅ Projects seeded');
 
     // 2. Seed Skills
-    console.log('Seeding Skills...');
-    // Skills don't have IDs in local data, so we map them. Upsert might duplicate if we run multiple times without IDs.
-    // For safety, we'll delete all and re-insert for skills/traits/contact since they are small lists.
-    await supabase.from('skills').delete().neq('name', 'placeholder');
-    const { error: skillError } = await supabase.from('skills').insert(portfolioData.skills);
-    if (skillError) console.error('Error seeding skills:', skillError);
-    else console.log('✅ Skills seeded');
+    // console.log('Seeding Skills...');
+    // await supabase.from('skills').delete().neq('name', 'placeholder');
+    // const { error: skillError } = await supabase.from('skills').insert(portfolioData.skills);
+    // if (skillError) console.error('Error seeding skills:', skillError);
+    // else console.log('✅ Skills seeded');
 
     // 3. Seed Experience
-    console.log('Seeding Experience...');
-    const { error: expError } = await supabase.from('experience').upsert(portfolioData.experience);
-    if (expError) console.error('Error seeding experience:', expError);
-    else console.log('✅ Experience seeded');
+    // console.log('Seeding Experience...');
+    // const { error: expError } = await supabase.from('experience').upsert(portfolioData.experience);
+    // if (expError) console.error('Error seeding experience:', expError);
+    // else console.log('✅ Experience seeded');
 
     // 4. Seed Traits
-    console.log('Seeding Traits...');
-    await supabase.from('personal_traits').delete().neq('value', 'placeholder');
-    const traits = [
-        ...portfolioData.personalTraits.strengths.map(v => ({ type: 'strength', value: v })),
-        ...portfolioData.personalTraits.weaknesses.map(v => ({ type: 'weakness', value: v })),
-        ...portfolioData.personalTraits.hobbies.map(v => ({ type: 'hobby', value: v }))
-    ];
-    const { error: traitError } = await supabase.from('personal_traits').insert(traits);
-    if (traitError) console.error('Error seeding traits:', traitError);
-    else console.log('✅ Traits seeded');
+    // console.log('Seeding Traits...');
+    // await supabase.from('personal_traits').delete().neq('value', 'placeholder');
+    // const traits = [
+    //     ...portfolioData.personalTraits.strengths.map(v => ({ type: 'strength', value: v })),
+    //     ...portfolioData.personalTraits.weaknesses.map(v => ({ type: 'weakness', value: v })),
+    //     ...portfolioData.personalTraits.hobbies.map(v => ({ type: 'hobby', value: v }))
+    // ];
+    // const { error: traitError } = await supabase.from('personal_traits').insert(traits);
+    // if (traitError) console.error('Error seeding traits:', traitError);
+    // else console.log('✅ Traits seeded');
 
     // 5. Seed Contact
-    console.log('Seeding Contact...');
-    await supabase.from('contact_info').delete().neq('value', 'placeholder');
-    const contacts = Object.entries(portfolioData.contact).map(([key, value]) => ({ platform: key, value }));
-    const { error: contactError } = await supabase.from('contact_info').insert(contacts);
-    if (contactError) console.error('Error seeding contact:', contactError);
-    else console.log('✅ Contact seeded');
+    // console.log('Seeding Contact...');
+    // await supabase.from('contact_info').delete().neq('value', 'placeholder');
+    // const contacts = Object.entries(portfolioData.contact).map(([key, value]) => ({ platform: key, value }));
+    // const { error: contactError } = await supabase.from('contact_info').insert(contacts);
+    // if (contactError) console.error('Error seeding contact:', contactError);
+    // else console.log('✅ Contact seeded');
+
+    // 6. Seed Certifications
+    console.log('Seeding Certifications...');
+    if (portfolioData.certifications && portfolioData.certifications.length > 0) {
+        const { error: certError } = await supabase.from('certifications').upsert(portfolioData.certifications);
+        if (certError) console.error('Error seeding certifications:', certError);
+        else console.log('✅ Certifications seeded');
+    }
 
     console.log('✨ Seeding complete!');
 }

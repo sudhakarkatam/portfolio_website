@@ -2,7 +2,8 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import { createGoogleGenerativeAI } from 'npm:@ai-sdk/google';
 import { createOpenAI } from 'npm:@ai-sdk/openai';
 import { streamText } from 'npm:ai';
-import { findRelevantChunks } from '@shared/ragUtils.ts';
+import { findRelevantChunks } from '../_shared/ragUtils.ts';
+import { Redis } from 'npm:@upstash/redis'; // REDIS SDK
 
 // CORS Headers
 const corsHeaders = {
@@ -33,8 +34,75 @@ const openrouter = createOpenAI({
     },
 });
 
-// Helper for System Prompt
-const getSystemPrompt = async (context: string, model?: string) => {
+// --- OLD SYSTEM: IN-MEMORY CACHE (COMMENTED OUT FOR REDIS MIGRATION) ---
+// To Revert: Uncomment this block and remove the Redis logic below.
+/*
+// GLOBAL CACHE (Survives in memory between requests)
+// To DISABLE caching (Revert to old system), set CACHE_TTL = 0
+const CACHE_TTL = 5 * 60 * 1000; // 5 Minutes
+let globalCache = {
+    data: null as any,
+    timestamp: 0
+};
+*/
+// -----------------------------------------------------------------------
+
+// Helper to fetch System Context (Redis/DB) - PARALLELIZABLE
+const fetchSystemContext = async (model?: string) => {
+    let appSettings, modelContexts;
+    if (!supabase) return { appSettings: null, modelContexts: null };
+
+    try {
+        // --- NEW SYSTEM: REDIS CACHE 🚀 ---
+        const redisUrl = Deno.env.get('UPSTASH_REDIS_REST_URL');
+        const redisToken = Deno.env.get('UPSTASH_REDIS_REST_TOKEN');
+
+        if (redisUrl && redisToken) {
+            const redis = new Redis({ url: redisUrl, token: redisToken });
+
+            // Try to get from Redis
+            const cachedData = await redis.get('chat_context');
+
+            if (cachedData) {
+                console.log("⚡ Using Redis Cached Context");
+                ({ appSettings, modelContexts } = cachedData as any);
+            } else {
+                console.log("🐢 Redis Cache Empty. Fetching from DB...");
+                // Fetch from DB
+                const [settingsResult, contextsResult] = await Promise.all([
+                    supabase.from("app_settings").select("value").eq("key", "system_prompt").single(),
+                    supabase.from("model_contexts").select("*")
+                ]);
+
+                appSettings = settingsResult;
+                modelContexts = contextsResult;
+
+                // Save to Redis (Expire in 10 mins = 600s)
+                await redis.set('chat_context', { appSettings, modelContexts }, { ex: 600 });
+            }
+        } else {
+            console.warn("⚠️ Redis Credentials missing. Falling back to DB.");
+        }
+    } catch (err) {
+        console.error("Redis Error (Falling back to DB):", err);
+    }
+
+    // Fallback if Redis failed/missing and we haven't fetched yet
+    if (!appSettings && !modelContexts) {
+        console.log("⚠️ Fetching from DB (Redis skipped)...");
+        const [settingsResult, contextsResult] = await Promise.all([
+            supabase.from("app_settings").select("value").eq("key", "system_prompt").single(),
+            supabase.from("model_contexts").select("*")
+        ]);
+        appSettings = settingsResult;
+        modelContexts = contextsResult;
+    }
+
+    return { appSettings, modelContexts };
+};
+
+// Helper to Build System Prompt (Pure Function)
+const buildSystemPrompt = (context: string, appSettings: any, modelContexts: any, model?: string) => {
     // CORE IDENTITY - HARDCODED SOURCE OF TRUTH
     const coreIdentity = `
     PORTFOLIO OWNER IDENTITY:
@@ -52,30 +120,21 @@ const getSystemPrompt = async (context: string, model?: string) => {
     4. If asked "Who is this?", describe Sudhakar based on the identity above.
     `;
 
-    // 1. Fetch custom instructions from Supabase (if available)
-    if (supabase) {
-        // Fetch Global Context (app_settings) AND Model Specific Context (model_contexts)
-        const [appSettings, modelContexts] = await Promise.all([
-            supabase.from("app_settings").select("value").eq("key", "system_prompt").single(),
-            supabase.from("model_contexts").select("*")
-        ]);
+    // Apply Global Context
+    if (appSettings?.data && appSettings.data.value) {
+        customInstructions = appSettings.data.value;
+    } else if (appSettings?.error) {
+        console.warn("⚠️ Failed to fetch system_prompt from Supabase:", appSettings.error.message);
+    }
 
-        // Apply Global Context
-        if (appSettings.data && appSettings.data.value) {
-            customInstructions = appSettings.data.value;
-        } else if (appSettings.error) {
-            console.warn("⚠️ Failed to fetch system_prompt from Supabase:", appSettings.error.message);
-        }
+    // Apply Model Specific Context
+    if (modelContexts?.data && model) {
+        const provider = (model.includes("gemini")) ? "gemini" : "openrouter";
+        const specificContext = modelContexts.data.find((c: any) => c.provider === provider)?.content;
 
-        // Apply Model Specific Context
-        if (modelContexts.data && model) {
-            const provider = (model.includes("gemini")) ? "gemini" : "openrouter";
-            const specificContext = modelContexts.data.find((c: any) => c.provider === provider)?.content;
-
-            if (specificContext) {
-                console.log(`Using specific context for ${model} (${provider})`);
-                customInstructions += `\n\n### MODEL SPECIFIC INSTRUCTIONS (${provider.toUpperCase()}):\n${specificContext}`;
-            }
+        if (specificContext) {
+            console.log(`Using specific context for ${model} (${provider})`);
+            customInstructions += `\n\n### MODEL SPECIFIC INSTRUCTIONS (${provider.toUpperCase()}):\n${specificContext}`;
         }
     }
 
@@ -213,8 +272,8 @@ const sanitizeMessages = (messages: any[]) => {
 
         // 6. Return clean object with ONLY supported fields
         return {
-            role: role as "user" | "assistant" | "system",
-            content: content
+            role: role,
+            content: content,
         };
     });
 };
@@ -226,7 +285,17 @@ Deno.serve(async (req) => {
     }
 
     try {
-        const { messages, model } = await req.json();
+        const { messages, model, type } = await req.json();
+        console.time("Total Execution");
+
+        // 0. HANDLE KEEP-ALIVE PING (COMMENTED OUT FOR REDIS MIGRATION)
+        /*
+        if (type === 'ping') {
+            return new Response(JSON.stringify({ message: 'pong' }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+        }
+        */
 
         if (!messages || !Array.isArray(messages)) {
             return new Response(JSON.stringify({ error: 'Invalid messages format' }), {
@@ -238,8 +307,14 @@ Deno.serve(async (req) => {
         const lastMessage = messages[messages.length - 1];
         const userQuery = lastMessage.content;
 
-        // 1. Retrieve relevant chunks (RAG)
-        let relevantChunks = await findRelevantChunks(userQuery);
+        // 1. PARALLEL EXECUTION: RAG Search + Redis/DB Fetch 🚀
+        console.time("Parallel Fetch (RAG + Redis)");
+        const [relevantChunks, { appSettings, modelContexts }] = await Promise.all([
+            findRelevantChunks(userQuery),
+            fetchSystemContext(model)
+        ]);
+        console.timeEnd("Parallel Fetch (RAG + Redis)");
+
         let context = "";
 
         if (relevantChunks.length > 0) {
@@ -249,34 +324,47 @@ Deno.serve(async (req) => {
 
             // FALLBACK: Fetch ALL data directly from Supabase
             if (supabase) {
-                const [projects, skills, experience, traits, contact, customImages, appSettings, modelContexts] = await Promise.all([
+                console.time("Supabase Fallback Fetch");
+                const [projects, skills, experience, traits, contact, customImages, certifications] = await Promise.all([
                     supabase.from('projects').select('*').order('created_at', { ascending: false }),
                     supabase.from('skills').select('*'),
                     supabase.from('experience').select('*').order('created_at', { ascending: false }),
                     supabase.from('personal_traits').select('*'),
                     supabase.from('contact_info').select('*'),
                     supabase.from('custom_images').select('*').order('created_at', { ascending: false }),
-                    supabase.from('app_settings').select('*'),
-                    supabase.from('model_contexts').select('*')
+                    supabase.from('certifications').select('*').order('created_at', { ascending: false })
                 ]);
+                console.timeEnd("Supabase Fallback Fetch");
 
                 let fallbackContextParts = [];
 
-                // Custom Context (from app_settings - GLOBAL)
-                if (appSettings.data) {
+                // Custom Context (from app_settings - GLOBAL) - ALREADY FETCHED IN PARALLEL
+                if (appSettings?.data) {
                     const customContext = appSettings.data.find((s: any) => s.key === 'system_prompt')?.value;
                     if (customContext) {
                         fallbackContextParts.push(`## GLOBAL CUSTOM CONTEXT:\n${customContext}`);
                     }
                 }
 
-                // Model Specific Context (from model_contexts)
-                if (modelContexts.data) {
+                // Model Specific Context (from model_contexts) - ALREADY FETCHED IN PARALLEL
+                if (modelContexts?.data) {
                     const provider = (model && model.includes('gemini')) ? 'gemini' : 'openrouter';
                     const modelContext = modelContexts.data.find((c: any) => c.provider === provider)?.content;
                     if (modelContext) {
                         fallbackContextParts.push(`## MODEL SPECIFIC CONTEXT (${provider}):\n${modelContext}`);
                     }
+                }
+
+                // Certifications
+                if (certifications.data) {
+                    const certTexts = certifications.data.map((c: any) => `
+Certification: ${c.name}
+Issuer: ${c.issuer}
+Date: ${c.date}
+Description: ${c.description}
+Link: ${c.url}
+`).join('\n');
+                    fallbackContextParts.push(`## CERTIFICATIONS:\n${certTexts}`);
                 }
 
                 // Projects
@@ -337,8 +425,10 @@ Image URL: ${img.url}
             }
         }
 
-        // 2. Get System Prompt (with Model-Specific Logic)
-        const systemPrompt = await getSystemPrompt(context, model);
+        // 2. Build System Prompt (Instant - No Fetching)
+        console.time("Build System Prompt");
+        const systemPrompt = buildSystemPrompt(context, appSettings, modelContexts, model);
+        console.timeEnd("Build System Prompt");
 
         // 3. Select Model and Generate Response
         if (model && !model.includes('gemini')) {
@@ -362,6 +452,7 @@ Image URL: ${img.url}
             console.log(`🚀 Sending request to OpenRouter: ${model}`);
 
             // 3. Direct API Call
+            console.time("OpenRouter API Call");
             const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
                 method: "POST",
                 headers: {
@@ -376,6 +467,7 @@ Image URL: ${img.url}
                     stream: true
                 })
             });
+            console.timeEnd("OpenRouter API Call");
 
             if (!response.ok) {
                 const errText = await response.text();

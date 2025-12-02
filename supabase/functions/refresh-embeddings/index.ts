@@ -30,14 +30,15 @@ Deno.serve(async (req: Request) => {
 
         // 2. Fetch Data from Supabase
         console.log('Fetching data from Supabase...');
-        const [projects, skills, experience, traits, contact, customImages, modelContexts] = await Promise.all([
+        const [projects, skills, experience, traits, contact, customImages, modelContexts, certifications] = await Promise.all([
             supabase.from('projects').select('*').order('created_at', { ascending: false }),
             supabase.from('skills').select('*'),
             supabase.from('experience').select('*').order('created_at', { ascending: false }),
             supabase.from('personal_traits').select('*'),
             supabase.from('contact_info').select('*'),
             supabase.from('custom_images').select('*').order('created_at', { ascending: false }),
-            supabase.from('model_contexts').select('*')
+            supabase.from('model_contexts').select('*'),
+            supabase.from('certifications').select('*').order('created_at', { ascending: false })
         ]);
 
         // 3. Fetch System Prompt
@@ -156,6 +157,22 @@ Image URL: ${img.url}`;
                     id: `model-context-${mc.id}`,
                     text,
                     metadata: { type: 'model_context', provider: mc.provider }
+                });
+            });
+        }
+
+        // Certifications
+        if (certifications.data) {
+            certifications.data.forEach((c: any) => {
+                const text = `Certification: ${c.name}
+Issuer: ${c.issuer}
+Date: ${c.date}
+Description: ${c.description}
+Link: ${c.url}`;
+                chunks.push({
+                    id: `certification-${c.id}`,
+                    text,
+                    metadata: { type: 'certification', id: c.id, name: c.name }
                 });
             });
         }
