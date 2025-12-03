@@ -1,748 +1,499 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { portfolioData } from "@/data/portfolioData";
+import { GitHubCalendar } from 'react-github-calendar';
+import { Tooltip } from 'react-tooltip';
 import {
   Mail,
   Github,
   Linkedin,
   Twitter,
-  ExternalLink,
-  CheckCircle2,
-  Menu,
-  X,
+  ArrowUpRight,
+  Download,
+  Share2,
+  Globe,
+  Sun,
+  Moon,
+  MessageSquare,
+  Star,
+  GitFork,
+  Code2,
+  Award,
+  Box,
+  Server,
+  Code,
+  Layers,
+  Flame,
+  GitBranch,
+  Cloud,
+  Bot,
+  FileCode,
+  Coffee,
+  Database
 } from "lucide-react";
 import * as LucideIcons from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { ContactForm } from "@/components/ContactForm";
+import {
+  FaReact, FaJava, FaNodeJs, FaPython, FaGitAlt, FaGithub, FaDocker, FaAws, FaHtml5, FaCss3, FaAndroid
+} from "react-icons/fa";
+import {
+  SiJavascript, SiTypescript, SiRedux, SiSpringboot, SiPostgresql, SiMysql, SiSupabase, SiFirebase, SiTailwindcss, SiNextdotjs, SiMongodb, SiExpress, SiSvelte, SiNuxtdotjs, SiSass, SiVercel, SiCapacitor, SiVite
+} from "react-icons/si";
+import { TbBrandNextjs } from "react-icons/tb";
+import { BiBrain } from "react-icons/bi";
+
+// Map skill names to React Icons
+const skillIcons: Record<string, any> = {
+  "react": FaReact,
+  "javascript": SiJavascript,
+  "typescript": SiTypescript,
+  "java": FaJava,
+  "html5": FaHtml5,
+  "css3": FaCss3,
+  "redux": SiRedux,
+  "node.js": FaNodeJs,
+  "python": FaPython,
+  "spring boot": SiSpringboot,
+  "postgresql": SiPostgresql,
+  "mysql": SiMysql,
+  "supabase": SiSupabase,
+  "firebase": SiFirebase,
+  "git": FaGitAlt,
+  "github": FaGithub,
+  "docker": FaDocker,
+  "aws": FaAws,
+  //"vs code": SiVisualstudiocode,
+  "ai tools": BiBrain,
+  "tailwind css": SiTailwindcss,
+  "next.js": SiNextdotjs,
+  "mongodb": SiMongodb,
+  "express.js": SiExpress,
+  "svelte": SiSvelte,
+  "nuxt.js": SiNuxtdotjs,
+  "sass": SiSass,
+  "vercel": SiVercel,
+  "capacitor": SiCapacitor,
+  "vite": SiVite,
+  "android": FaAndroid
+};
+
+// Color for each skill
+const iconColors: Record<string, string> = {
+  "react": "#61DAFB",
+  "javascript": "#F7DF1E",
+  "typescript": "#3178C6",
+  "java": "#E76F00",
+  "html5": "#E34F26",
+  "css3": "#1572B6",
+  "redux": "#764ABC",
+  "node.js": "#339933",
+  "python": "#3776AB",
+  "spring boot": "#6DB33F",
+  "postgresql": "#336791",
+  "mysql": "#4479A1",
+  "supabase": "#3ecf8e",
+  "firebase": "#FFCA28",
+  "git": "#F05032",
+  "github": "#000000",
+  "docker": "#2496ED",
+  "aws": "#FF9900",
+  "android": "#3DDC84",
+  "ai tools": "#9b59b6",
+  "tailwind css": "#38BDF8",
+  "next.js": "#000000",
+  "mongodb": "#47A248",
+  "express.js": "#000000",
+  "svelte": "#FF3E00",
+  "nuxt.js": "#00DC82",
+  "sass": "#CC6699",
+  "vercel": "#000000",
+  "capacitor": "#119EFF",
+  "vite": "#646CFF"
+};
+
+const TechBadge = ({ name, theme }: { name: string; theme: string }) => {
+  // Normalize name to match keys
+  const normalizedName = name.toLowerCase().replace(" & ", " ").split("/")[0].trim();
+  // Try to find exact match or partial match
+  const iconKey = Object.keys(skillIcons).find(key => normalizedName.includes(key) || key.includes(normalizedName));
+  const Icon = iconKey ? skillIcons[iconKey] : LucideIcons.Code2;
+  const color = iconKey ? iconColors[iconKey] : (theme === "dark" ? "#ffffff" : "#000000");
+
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all cursor-default ${theme === 'dark'
+      ? 'bg-zinc-800/50 text-zinc-300 border-white/10 hover:bg-zinc-800 hover:text-white'
+      : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:text-gray-900 shadow-sm'
+      }`}>
+      <Icon size={14} style={{ color }} />
+      {name}
+    </span>
+  );
+};
 
 const Portfolio = () => {
-  const {
-    name,
-    title,
-    bio,
-    skills,
-    projects,
-    experience,
-    contact,
-    personalTraits,
-    availability,
-  } = portfolioData;
-  const [showContactForm, setShowContactForm] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { name, title, bio, skills, projects, experience, contact } = portfolioData;
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [repoStats, setRepoStats] = useState<Record<string, { stars: number; forks: number }>>({});
+  const githubUsername = contact.github ? contact.github.split('/').pop() : 'sudhakarkatam';
 
-  // Separate education and work experience, filter out internships
-  const education = experience.filter((exp) => exp.type === "Education");
-  const workExperience = experience.filter(
-    (exp) => exp.type !== "Education" && exp.type !== "Virtual Internship",
-  );
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
 
-  // Get icon component from icon name
+  // Fetch GitHub repo stats
+  useEffect(() => {
+    const fetchRepoData = async () => {
+      const repos = [
+        "finance_cal",
+        "tracker22",
+        "portfolio_website",
+        "droply_app",
+        "Jobfinder-hub"
+      ];
+      const stats: Record<string, { stars: number; forks: number }> = {};
+
+      for (const repo of repos) {
+        try {
+          const res = await fetch(`https://api.github.com/repos/${githubUsername}/${repo}`);
+          if (res.ok) {
+            const data = await res.json();
+            stats[repo] = { stars: data.stargazers_count, forks: data.forks_count };
+          } else {
+            stats[repo] = { stars: 0, forks: 0 };
+          }
+        } catch (e) {
+          console.error(`Failed to fetch stats for ${repo}`, e);
+          stats[repo] = { stars: 0, forks: 0 };
+        }
+      }
+      setRepoStats(stats);
+    };
+    fetchRepoData();
+  }, [githubUsername]);
+
+  // Filter out Education, keep Work and Virtual Internship
+  const workExperience = experience.filter(exp => exp.type !== "Education");
+
   const getIconComponent = (iconName: string) => {
     const Icon = (LucideIcons as any)[iconName];
     return Icon || LucideIcons.Code;
   };
 
-  // Smooth scroll function
-  const scrollToSection = (id: string) => {
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  };
-
-  // Scroll to top of portfolio (about section)
-  const scrollToTop = () => {
-    scrollToSection("about");
-  };
-
-  // Handle "Let's work together" click
-  const handleLetsWorkTogether = () => {
-    setShowContactForm(true);
-    setTimeout(() => {
-      scrollToSection("contact");
-    }, 100);
-  };
-
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 sm:px-6 py-8 sm:py-16 max-w-4xl">
-        {/* Navigation */}
-        <nav className="flex justify-between items-center mb-12 sm:mb-20 sticky top-3 sm:top-6 z-50 bg-background/90 backdrop-blur-sm py-3 sm:py-4 px-4 rounded-lg border border-border/50">
-          <button
-            onClick={scrollToTop}
-            className="text-lg sm:text-xl font-semibold hover:text-primary transition-colors cursor-pointer"
-          >
-            {name.split(" ")[0]}
-          </button>
-
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex gap-4 items-center">
-            <button
-              onClick={() => scrollToSection("about")}
-              className="text-sm hover:text-primary transition-colors"
-            >
-              About
-            </button>
-            <button
-              onClick={() => scrollToSection("skills")}
-              className="text-sm hover:text-primary transition-colors"
-            >
-              Skills
-            </button>
-            <button
-              onClick={() => scrollToSection("experience")}
-              className="text-sm hover:text-primary transition-colors"
-            >
-              Experience
-            </button>
-            <button
-              onClick={() => scrollToSection("education")}
-              className="text-sm hover:text-primary transition-colors"
-            >
-              Education
-            </button>
-            <button
-              onClick={() => scrollToSection("projects")}
-              className="text-sm hover:text-primary transition-colors"
-            >
-              Projects
-            </button>
-            <button
-              onClick={() => scrollToSection("contact")}
-              className="text-sm hover:text-primary transition-colors"
-            >
-              Contact
-            </button>
-            {contact.resume && (
-              <a
-                href={contact.resume}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-4 py-2 text-sm border rounded-md hover:bg-muted transition-colors"
-              >
-                Resume
-              </a>
-            )}
-            <a
-              href="/"
-              className="px-4 py-2 text-sm border rounded-md hover:bg-muted transition-colors"
-            >
-              Chat
-            </a>
-          </div>
-
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden p-2 hover:bg-muted rounded-md transition-colors"
-          >
-            {isMobileMenuOpen ? (
-              <X className="w-5 h-5" />
-            ) : (
-              <Menu className="w-5 h-5" />
-            )}
-          </button>
-
-          {/* Mobile Navigation Menu */}
-          {isMobileMenuOpen && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-background/95 backdrop-blur-sm border border-border rounded-lg shadow-lg md:hidden">
-              <div className="flex flex-col p-4 space-y-3">
-                <button
-                  onClick={() => {
-                    scrollToSection("about");
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="text-left text-sm hover:text-primary transition-colors py-2"
-                >
-                  About
-                </button>
-                <button
-                  onClick={() => {
-                    scrollToSection("skills");
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="text-left text-sm hover:text-primary transition-colors py-2"
-                >
-                  Skills
-                </button>
-                <button
-                  onClick={() => {
-                    scrollToSection("experience");
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="text-left text-sm hover:text-primary transition-colors py-2"
-                >
-                  Experience
-                </button>
-                <button
-                  onClick={() => {
-                    scrollToSection("education");
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="text-left text-sm hover:text-primary transition-colors py-2"
-                >
-                  Education
-                </button>
-                <button
-                  onClick={() => {
-                    scrollToSection("projects");
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="text-left text-sm hover:text-primary transition-colors py-2"
-                >
-                  Projects
-                </button>
-                <button
-                  onClick={() => {
-                    scrollToSection("contact");
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="text-left text-sm hover:text-primary transition-colors py-2"
-                >
-                  Contact
-                </button>
-                <div className="flex flex-col gap-2 pt-2 border-t border-border">
-                  {contact.resume && (
-                    <a
-                      href={contact.resume}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center px-4 py-2 text-sm border rounded-md hover:bg-muted transition-colors"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                      Resume
-                    </a>
-                  )}
-                  <a
-                    href="/"
-                    className="inline-flex items-center justify-center px-4 py-2 text-sm border rounded-md hover:bg-muted transition-colors"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Chat
-                  </a>
-                </div>
-              </div>
-            </div>
-          )}
-        </nav>
-
-        {/* Hero / About Section */}
-        <motion.section
-          id="about"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-16 sm:mb-24"
+    <div className={`min-h-screen transition-colors duration-300 ${theme === 'dark' ? 'bg-[#0A0A0A] text-white' : 'bg-white text-gray-900'
+      }`}>
+      {/* Theme Toggle & Chat Button */}
+      <div className="fixed top-6 right-6 z-50 flex items-center gap-3">
+        <a
+          href="/"
+          className={`p-3 rounded-full shadow-lg transition-all hover:scale-105 active:scale-95 flex items-center gap-2 font-medium text-sm ${theme === 'dark'
+            ? 'bg-blue-600 text-white hover:bg-blue-500'
+            : 'bg-black text-white hover:bg-gray-800'
+            }`}
         >
-          <div className="flex flex-col md:flex-row gap-6 sm:gap-8 items-start">
-            <div className="flex-1 order-2 md:order-1">
-              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-3 sm:mb-4 leading-tight">
-                {name}
-              </h1>
-              <p className="text-base sm:text-lg italic text-muted-foreground mb-4 sm:mb-6">
-                {title}
-              </p>
-              <p className="text-sm sm:text-base text-muted-foreground mb-6 sm:mb-8 leading-relaxed">
-                {bio}
-              </p>
-              <div className="flex flex-wrap gap-2 sm:gap-3">
-                {contact.email && (
-                  <a
-                    href={`mailto:${contact.email}`}
-                    className="inline-flex items-center gap-2 px-4 py-2 text-sm border rounded-md hover:bg-muted transition-colors"
-                  >
-                    <Mail className="w-4 h-4" />
-                    Email
-                  </a>
-                )}
-                {contact.github && (
-                  <a
-                    href={contact.github}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2 text-sm border rounded-md hover:bg-muted transition-colors"
-                  >
-                    <Github className="w-4 h-4" />
-                    GitHub
-                  </a>
-                )}
-                {contact.linkedin && (
-                  <a
-                    href={contact.linkedin}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2 text-sm border rounded-md hover:bg-muted transition-colors"
-                  >
-                    <Linkedin className="w-4 h-4" />
-                    LinkedIn
-                  </a>
-                )}
-                {contact.twitter && (
-                  <a
-                    href={contact.twitter}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2 text-sm border rounded-md hover:bg-muted transition-colors"
-                  >
-                    <Twitter className="w-4 h-4" />
-                    Twitter
-                  </a>
-                )}
-              </div>
-            </div>
-            <div className="flex-shrink-0 relative order-1 md:order-2 self-center">
-              <img
-                src="/profile_image.jpeg"
-                alt={name}
-                className="w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 rounded-full object-cover border-4 border-muted"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = "none";
-                }}
-              />
-              {availability && availability.available && (
-                <div className="absolute -bottom-1 sm:-bottom-2 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
-                  <div className="inline-flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 bg-background border border-primary/30 rounded-full shadow-sm">
-                    <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-primary" />
-                    <span className="text-xs font-medium text-foreground">
-                      {availability.statusText}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </motion.section>
-
-        {/* Present Section */}
-        <motion.section
-          id="present"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="mb-16 sm:mb-24 scroll-mt-20"
+          <MessageSquare size={18} />
+          <span className="hidden sm:inline">Chat with AI</span>
+        </a>
+        <button
+          onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}
+          className={`p-3 rounded-full shadow-lg transition-all hover:scale-105 ${theme === 'dark'
+            ? 'bg-zinc-800 text-white hover:bg-zinc-700'
+            : 'bg-white text-gray-900 hover:bg-gray-50 border border-gray-200'
+            }`}
         >
-          <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">
-            Present
-          </h2>
-          <p className="text-base text-muted-foreground leading-relaxed mb-4">
-            Currently I'm focused on building innovative projects and creating
-            full-stack applications that solve real problems and push the
-            boundaries of what's possible. Always excited to collaborate on new
-            ideas and take on challenging projects.{" "}
-            <button
-              onClick={handleLetsWorkTogether}
-              className="text-primary hover:underline font-medium cursor-pointer"
-            >
-              Let's work together.
-            </button>
-          </p>
-          <div className="mt-6">
-            <h3 className="text-lg font-semibold mb-3 text-primary">
-              Currently Learning
-            </h3>
-            <div className="space-y-1 text-base text-muted-foreground">
-              <div>AI</div>
-              <div>DevOps</div>
-              <div>Building apps</div>
-            </div>
-          </div>
-        </motion.section>
+          {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+        </button>
+      </div>
 
-        {/* Skills Section */}
-        <motion.section
-          id="skills"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="mb-16 sm:mb-24 scroll-mt-20"
-        >
-          <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Skills</h2>
+      <div className="max-w-[1400px] mx-auto px-6 py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-8">
+
+          {/* LEFT SIDEBAR */}
           <div className="space-y-6">
-            {["Frontend", "Backend", "Database", "Tools"].map((category) => {
-              const categorySkills = skills.filter(
-                (s) => s.category === category,
-              );
-              if (categorySkills.length === 0) return null;
 
-              // Color schemes for each category
-              const categoryColors: Record<
-                string,
-                { bg: string; text: string; border: string }
-              > = {
-                Frontend: {
-                  bg: "bg-blue-500/20",
-                  text: "text-blue-600 dark:text-blue-400",
-                  border: "border-blue-500/30",
-                },
-                Backend: {
-                  bg: "bg-purple-500/20",
-                  text: "text-purple-600 dark:text-purple-400",
-                  border: "border-purple-500/30",
-                },
-                Database: {
-                  bg: "bg-green-500/20",
-                  text: "text-green-600 dark:text-green-400",
-                  border: "border-green-500/30",
-                },
-                Tools: {
-                  bg: "bg-orange-500/20",
-                  text: "text-orange-600 dark:text-orange-400",
-                  border: "border-orange-500/30",
-                },
-              };
-
-              const colors =
-                categoryColors[category] || categoryColors.Frontend;
-
-              return (
-                <div key={category}>
-                  <h3 className="text-sm sm:text-base font-semibold mb-2 sm:mb-3 text-foreground">
-                    {category}
-                  </h3>
-                  <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-4 sm:mb-6">
-                    {categorySkills.map((skill) => {
-                      const IconComponent = getIconComponent(skill.icon);
-                      return (
-                        <Badge
-                          key={skill.name}
-                          className={`px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-normal ${colors.bg} ${colors.text} ${colors.border} border hover:opacity-80 transition-opacity inline-flex items-center gap-1.5 sm:gap-2`}
-                        >
-                          <IconComponent className="w-3 h-3 sm:w-4 sm:h-4" />
-                          {skill.name}
-                        </Badge>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </motion.section>
-
-        {/* Work Experience Section */}
-        <motion.section
-          id="experience"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35 }}
-          className="mb-16 sm:mb-24 scroll-mt-20"
-        >
-          <h2 className="text-xl sm:text-2xl font-bold mb-6 sm:mb-8">
-            Experience
-          </h2>
-          <div className="space-y-8">
-            {workExperience.map((exp) => (
-              <div key={exp.id} className="pb-8 border-b last:border-0">
-                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-3">
-                  <div>
-                    <h3 className="text-xl font-semibold mb-1">{exp.role}</h3>
-                    <p className="text-muted-foreground">{exp.company}</p>
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {exp.period}
-                  </div>
-                </div>
-                <p className="text-muted-foreground mb-4 leading-relaxed">
-                  {exp.description}
-                </p>
-                {exp.technologies && exp.technologies.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {exp.technologies.map((tech) => (
-                      <Badge
-                        key={tech}
-                        variant="outline"
-                        className="text-xs font-normal"
-                      >
-                        {tech}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </motion.section>
-
-        {/* Education Section */}
-        <motion.section
-          id="education"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.38 }}
-          className="mb-16 sm:mb-24 scroll-mt-20"
-        >
-          <h2 className="text-xl sm:text-2xl font-bold mb-6 sm:mb-8">
-            Education
-          </h2>
-          <div className="space-y-8">
-            {education.map((edu) => (
-              <div key={edu.id} className="pb-8 border-b last:border-0">
-                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-3">
-                  <div>
-                    <h3 className="text-xl font-semibold mb-1">{edu.role}</h3>
-                    <p className="text-muted-foreground">{edu.company}</p>
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {edu.period}
-                  </div>
-                </div>
-                <p className="text-muted-foreground mb-4 leading-relaxed">
-                  {edu.description}
-                </p>
-                {edu.achievements && edu.achievements.length > 0 && (
-                  <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                    {edu.achievements.map((achievement, i) => (
-                      <li key={i}>{achievement}</li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            ))}
-          </div>
-        </motion.section>
-
-        {/* Projects Section */}
-        <motion.section
-          id="projects"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="mb-16 sm:mb-24 scroll-mt-20"
-        >
-          <h2 className="text-xl sm:text-2xl font-bold mb-6 sm:mb-8">
-            Projects
-          </h2>
-          <div className="space-y-8 sm:space-y-12">
-            {projects.map((project) => (
-              <div
-                key={project.id}
-                className="pb-6 sm:pb-8 border-b last:border-0"
-              >
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-3 gap-3">
-                  <div className="flex items-center gap-2 flex-1">
-                    {project.icon &&
-                      (() => {
-                        const IconComponent = getIconComponent(project.icon);
-                        return (
-                          <IconComponent className="w-5 h-5 sm:w-6 sm:h-6 text-primary flex-shrink-0" />
-                        );
-                      })()}
-                    <h3 className="text-lg sm:text-xl font-semibold mb-0">
-                      {project.title}
-                    </h3>
-                  </div>
-                  <div className="flex gap-2 flex-shrink-0 self-start">
-                    {project.github && (
-                      <a
-                        href={project.github}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        <Github className="w-5 h-5" />
-                      </a>
-                    )}
-                    {project.link && (
-                      <a
-                        href={project.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        <ExternalLink className="w-5 h-5" />
-                      </a>
-                    )}
-                  </div>
-                </div>
-                                {/* Tags */}
-                                {project.tags && project.tags.length > 0 && (
-                  <div className="flex gap-2 mb-3">
-                    {project.tags.map((tag, index) => (
-                      <Badge key={index} className="bg-green-100 text-green-800 border-green-200 text-xs">
-                        {tag}
-                      </Badge>  
-                    ))}
-                  </div>
-                )}
-                <p className="text-sm sm:text-base text-muted-foreground leading-relaxed mb-3 sm:mb-4">
-                  {project.description}
-                </p>
-                <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                  {project.technologies.map((tech) => {
-                    // Assign colors based on technology type
-                    const getTechColor = (techName: string) => {
-                      const lowerTech = techName.toLowerCase();
-                      if (
-                        lowerTech.includes("react") ||
-                        lowerTech.includes("next") ||
-                        lowerTech.includes("vue") ||
-                        lowerTech.includes("angular")
-                      ) {
-                        return {
-                          bg: "bg-blue-500/20",
-                          text: "text-blue-600 dark:text-blue-400",
-                          border: "border-blue-500/30",
-                        };
-                      }
-                      if (
-                        lowerTech.includes("node") ||
-                        lowerTech.includes("express") ||
-                        lowerTech.includes("java") ||
-                        lowerTech.includes("spring")
-                      ) {
-                        return {
-                          bg: "bg-purple-500/20",
-                          text: "text-purple-600 dark:text-purple-400",
-                          border: "border-purple-500/30",
-                        };
-                      }
-                      if (
-                        lowerTech.includes("postgres") ||
-                        lowerTech.includes("mysql") ||
-                        lowerTech.includes("mongodb") ||
-                        lowerTech.includes("redis") ||
-                        lowerTech.includes("supabase") ||
-                        lowerTech.includes("firebase")
-                      ) {
-                        return {
-                          bg: "bg-green-500/20",
-                          text: "text-green-600 dark:text-green-400",
-                          border: "border-green-500/30",
-                        };
-                      }
-                      if (
-                        lowerTech.includes("docker") ||
-                        lowerTech.includes("aws") ||
-                        lowerTech.includes("git") ||
-                        lowerTech.includes("vite") ||
-                        lowerTech.includes("typescript") ||
-                        lowerTech.includes("javascript")
-                      ) {
-                        return {
-                          bg: "bg-orange-500/20",
-                          text: "text-orange-600 dark:text-orange-400",
-                          border: "border-orange-500/30",
-                        };
-                      }
-                      // Default color
-                      return {
-                        bg: "bg-slate-500/20",
-                        text: "text-slate-600 dark:text-slate-400",
-                        border: "border-slate-500/30",
-                      };
-                    };
-
-                    const colors = getTechColor(tech);
-                    return (
-                      <Badge
-                        key={tech}
-                        className={`text-xs font-normal px-2 sm:px-3 py-0.5 sm:py-1 ${colors.bg} ${colors.text} ${colors.border} border`}
-                      >
-                        {tech}
-                      </Badge>
-                    );
-                  })}
+            {/* Profile Card */}
+            <div className={`rounded-3xl p-6 ${theme === 'dark' ? 'bg-zinc-900' : 'bg-gray-50'
+              }`}>
+              <div className="w-32 h-32 mx-auto mb-4 rounded-full overflow-hidden border-4 border-orange-500">
+                <img
+                  src="/profile_image.jpeg"
+                  alt={name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                  }}
+                />
+                <div className={`hidden w-full h-full flex items-center justify-center text-5xl font-bold ${theme === 'dark' ? 'bg-zinc-800 text-zinc-600' : 'bg-gray-100 text-gray-400'
+                  }`}>
+                  {name.split(' ').map(n => n[0]).join('')}
                 </div>
               </div>
-            ))}
-          </div>
-        </motion.section>
 
-        {/* Hobbies Section */}
-        {personalTraits?.hobbies && personalTraits.hobbies.length > 0 && (
-          <motion.section
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="mb-24 scroll-mt-20"
-          >
-            <h2 className="text-2xl font-bold mb-6">Interests</h2>
-            <div className="flex flex-wrap gap-1.5 sm:gap-2">
-              {personalTraits.hobbies.map((hobby, index) => (
-                <Badge
-                  key={index}
-                  variant="secondary"
-                  className="text-xs sm:text-sm font-normal px-2 sm:px-3 py-0.5 sm:py-1"
+              <div className="text-center mb-6">
+                <h1 className="text-2xl font-bold mb-1">{name}</h1>
+                <p className="text-purple-500 font-medium">{title}</p>
+                <p className={`text-sm mt-3 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                  {bio}
+                </p>
+              </div>
+
+              {contact.resume && (
+                <a
+                  href={contact.resume}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={`block w-full py-3 rounded-xl font-medium transition-all mb-4 text-center ${theme === 'dark'
+                    ? 'bg-white text-black hover:bg-gray-100'
+                    : 'bg-black text-white hover:bg-gray-800'
+                    }`}
                 >
-                  {hobby}
-                </Badge>
+                  <Download size={18} className="inline mr-2" />
+                  Download CV
+                </a>
+              )}
+
+              <div className="flex justify-center gap-2">
+                {[
+                  { icon: Mail, link: contact.email ? `mailto:${contact.email}` : null },
+                  { icon: Github, link: contact.github },
+                  { icon: Linkedin, link: contact.linkedin },
+                  { icon: Globe, link: contact.website },
+                  { icon: Twitter, link: contact.twitter }
+                ].map((item, i) => item.link && (
+                  <a
+                    key={i}
+                    href={item.link}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`p-2.5 rounded-lg transition-all hover:scale-110 ${theme === 'dark'
+                      ? 'bg-zinc-800 text-gray-400 hover:text-white'
+                      : 'bg-white text-gray-600 hover:text-black border border-gray-200'
+                      }`}
+                  >
+                    <item.icon size={18} />
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            {/* Skills */}
+            <div className={`rounded-3xl p-6 ${theme === 'dark' ? 'bg-zinc-900' : 'bg-gray-50'
+              }`}>
+              <h3 className="font-bold mb-4 text-sm uppercase tracking-wider opacity-60">
+                Skills
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {skills.map((skill) => (
+                  <TechBadge key={skill.name} name={skill.name} theme={theme} />
+                ))}
+              </div>
+            </div>
+
+            {/* Work Experience */}
+            <div className={`rounded-3xl p-6 ${theme === 'dark' ? 'bg-zinc-900' : 'bg-gray-50'
+              }`}>
+              <h3 className="font-bold mb-6 text-sm uppercase tracking-wider opacity-60">
+                Work Experience
+              </h3>
+              <div className="space-y-6 relative pl-6 border-l border-orange-500">
+                {workExperience.map((exp) => (
+                  <div key={exp.id} className="relative">
+                    <div className="absolute -left-[29px] top-1 w-4 h-4 rounded-full bg-orange-500" />
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl">🏢</span>
+                      <div>
+                        <h4 className="font-semibold">{exp.company}</h4>
+                        <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                          {exp.role}
+                        </p>
+                        <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
+                          {exp.period}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* MAIN CONTENT */}
+          <div className="space-y-8">
+
+            {/* Projects Header */}
+            <h2 className="text-3xl font-bold">Projects I've Made</h2>
+
+            {/* Projects Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-8">
+              {projects.map((project, index) => (
+                <motion.div
+                  key={project.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className={`rounded-2xl p-5 border transition-all hover:shadow-xl ${theme === 'dark'
+                    ? 'bg-zinc-900 border-zinc-800 hover:border-zinc-700'
+                    : 'bg-gray-50 border-gray-200 hover:border-gray-300'
+                    }`}
+                >
+                  {/* Header */}
+                  <div className="flex justify-between items-start mb-4">
+                    <div className={`p-2.5 rounded-xl ${theme === 'dark' ? 'bg-zinc-800' : 'bg-gray-100'
+                      }`}>
+                      {(() => {
+                        const Icon = getIconComponent(project.icon || "Code");
+                        return <Icon className={`w-5 h-5 ${theme === 'dark' ? 'text-zinc-100' : 'text-gray-700'
+                          }`} />;
+                      })()}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${project.status === "Live"
+                        ? "bg-emerald-500/10 text-emerald-500"
+                        : project.status === "Building"
+                          ? "bg-blue-500/10 text-blue-500"
+                          : "bg-purple-500/10 text-purple-500"
+                        }`}>
+                        {project.status || "Building"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="mb-4">
+                    <h3 className="text-lg font-bold mb-2 flex items-center gap-2">
+                      {project.title}
+                      {project.link && (
+                        <a href={project.link} target="_blank" rel="noreferrer">
+                          <ArrowUpRight size={16} className="opacity-50 hover:opacity-100" />
+                        </a>
+                      )}
+                    </h3>
+                    <p className={`text-sm leading-relaxed ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                      }`}>
+                      {project.description}
+                    </p>
+                  </div>
+
+                  {/* Tech Stack */}
+                  <div>
+                    <p className="text-xs uppercase tracking-wider opacity-50 mb-2">
+                      🔧 TECH STACK
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {project.technologies.slice(0, 4).map((tech) => (
+                        <TechBadge key={tech} name={tech} theme={theme} />
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
               ))}
             </div>
-          </motion.section>
-        )}
 
-        {/* Contact Section */}
-        <motion.section
-          id="contact"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-          className="mb-12 sm:mb-16 scroll-mt-20"
-        >
-          <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">
-            Get in Touch
-          </h2>
-          {showContactForm ? (
-            <div className="mb-6">
-              <ContactForm />
-            </div>
-          ) : (
-            <>
-              <p className="text-muted-foreground mb-6">
-                Want to chat? Just shoot me a message via email or reach out on
-                social media.
+            {/* GitHub Section */}
+            <div className={`rounded-3xl p-8 ${theme === 'dark' ? 'bg-zinc-900' : 'bg-gray-50'
+              }`}>
+              <h2 className="text-2xl font-bold mb-2">GitHub</h2>
+              <p className={`text-sm mb-6 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                Highlights from my open-source activity and pinned repositories.
               </p>
-              <div className="flex flex-wrap gap-2 sm:gap-3">
-                {contact.email && (
-                  <a
-                    href={`mailto:${contact.email}`}
-                    className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm border rounded-md hover:bg-muted transition-colors"
-                  >
-                    <Mail className="w-4 h-4" />
-                    Email
-                  </a>
-                )}
-                {contact.github && (
-                  <a
-                    href={contact.github}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm border rounded-md hover:bg-muted transition-colors"
-                  >
-                    <Github className="w-4 h-4" />
-                    GitHub
-                  </a>
-                )}
-                {contact.linkedin && (
-                  <a
-                    href={contact.linkedin}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm border rounded-md hover:bg-muted transition-colors"
-                  >
-                    <Linkedin className="w-4 h-4" />
-                    LinkedIn
-                  </a>
-                )}
-                {contact.twitter && (
-                  <a
-                    href={contact.twitter}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm border rounded-md hover:bg-muted transition-colors"
-                  >
-                    <Twitter className="w-4 h-4" />
-                    Twitter
-                  </a>
-                )}
+
+              {/* Contribution Graph */}
+              <div className={`rounded-2xl p-6 mb-8 overflow-hidden ${theme === 'dark' ? 'bg-black' : 'bg-white border border-gray-200'
+                }`}>
+                <div className="flex items-center gap-2 mb-4">
+                  <Github size={20} />
+                  <span className="font-semibold">{githubUsername} • Contributions</span>
+                </div>
+                <div className="flex justify-center overflow-x-auto">
+                  <GitHubCalendar
+                    username={githubUsername}
+                    colorScheme={theme === 'dark' ? 'dark' : 'light'}
+                    theme={{
+                      light: ['#ebedf0', '#fdcb82', '#fdac54', '#f98634', '#e05d44'],
+                      dark: ['#161b22', '#fdcb82', '#fdac54', '#f98634', '#e05d44'],
+                    }}
+                    fontSize={12}
+                    blockSize={12}
+                    blockMargin={4}
+                    renderBlock={(block, activity) => (
+                      // Clone the block (which is an SVG rect) and add tooltip attributes
+                      // Wrapping in a div breaks the SVG structure
+                      React.cloneElement(block as React.ReactElement, {
+                        'data-tooltip-id': 'github-tooltip',
+                        'data-tooltip-content': `${activity.count} contributions on ${activity.date}`,
+                      })
+                    )}
+                  />
+                  <Tooltip id="github-tooltip" />
+                </div>
               </div>
-            </>
-          )}
-        </motion.section>
+
+              {/* Pinned Repos */}
+              <div className="mb-4">
+                <span className="text-sm font-medium opacity-60">
+                  📌 Pinned Repositories
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[
+                  { name: "finance_cal", lang: "React", desc: "Comprehensive financial calculator PWA" },
+                  { name: "tracker22", lang: "TypeScript", desc: "Offline-first habit tracking application" },
+                  { name: "portfolio_website", lang: "TypeScript", desc: "Personal portfolio website with AI integration" },
+                  { name: "droply_app", lang: "TypeScript", desc: "File sharing application" },
+                  { name: "Jobfinder-hub", lang: "JavaScript", desc: "Job search aggregator platform" }
+                ].map((repo) => {
+                  const stats = repoStats[repo.name] || { stars: 0, forks: 0 };
+                  return (
+                    <a
+                      key={repo.name}
+                      href={`https://github.com/${githubUsername}/${repo.name}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={`p-4 rounded-xl border transition-all hover:-translate-y-1 ${theme === 'dark'
+                        ? 'bg-black border-zinc-800 hover:border-zinc-700'
+                        : 'bg-white border-gray-200 hover:border-gray-300'
+                        }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-semibold text-blue-500 truncate pr-2">{repo.name}</span>
+                        <ArrowUpRight size={14} className="opacity-50 flex-shrink-0" />
+                      </div>
+                      <p className={`text-xs mb-3 line-clamp-2 h-8 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-600'}`}>
+                        {repo.desc}
+                      </p>
+                      <div className="flex items-center gap-3 text-xs opacity-60">
+                        <div className="flex items-center gap-1">
+                          <span className={`w-2 h-2 rounded-full ${repo.lang === 'TypeScript' ? 'bg-blue-400' :
+                            repo.lang === 'JavaScript' ? 'bg-yellow-400' : 'bg-orange-400'
+                            }`} />
+                          {repo.lang}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Star size={12} /> {stats.stars}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <GitFork size={12} /> {stats.forks}
+                        </div>
+                      </div>
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Footer */}
-        <footer className="text-center text-xs sm:text-sm text-muted-foreground py-6 sm:py-8 border-t">
-          <p>
-            © {new Date().getFullYear()} {name}. All rights reserved.
+        <footer className={`border-t mt-12 py-8 text-center ${theme === 'dark' ? 'border-zinc-800' : 'border-gray-200'
+          }`}>
+          <p className="text-sm opacity-60">
+            © {new Date().getFullYear()} {name}
           </p>
         </footer>
       </div>
