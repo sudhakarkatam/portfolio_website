@@ -18,70 +18,50 @@ export const ProjectCard = ({ project, featured = false, onViewDetails }: Projec
       case 'in progress': return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'live': return 'bg-purple-100 text-purple-800 border-purple-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
+        project.category === 'ai/ml' ? '🤖' : '💻'
     }
-  };
+  </div >
+)}
 
-  const getCategoryColor = (category: string) => {
-    switch (category?.toLowerCase()) {
-      case 'web': return 'bg-blue-50 text-blue-700 border-blue-200';
-      case 'mobile': return 'bg-green-50 text-green-700 border-green-200';
-      case 'ai/ml': return 'bg-purple-50 text-purple-700 border-purple-200';
-      case 'full-stack': return 'bg-orange-50 text-orange-700 border-orange-200';
-      default: return 'bg-gray-50 text-gray-700 border-gray-200';
-    }
-  };
+{/* Status Badge */ }
+{
+  project.status && (
+    <Badge className={`absolute top-2 right-2 ${getStatusColor(project.status)}`}>
+      {project.status}
+    </Badge>
+  )
+}
 
-  return (
-    <Card className={`group hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:-translate-y-1 ${
-      featured ? 'ring-2 ring-blue-200 shadow-md' : ''
-    }`}>
-      {/* Project Image/Thumbnail */}
-      <div className="relative overflow-hidden rounded-t-lg bg-gradient-to-br from-blue-50 to-indigo-100 h-40 flex items-center justify-center">
-        {project.image ? (
-          <img
-            src={project.image}
-            alt={project.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          />
-        ) : (
-          <div className="text-5xl opacity-20">
-            {project.category === 'web' ? '🌐' :
-             project.category === 'mobile' ? '📱' :
-             project.category === 'ai/ml' ? '🤖' : '💻'}
-          </div>
-        )}
+{/* Category Badge */ }
+{
+  project.category && (
+    <Badge variant="outline" className={`absolute top-2 left-2 ${getCategoryColor(project.category)}`}>
+      {project.category}
+    </Badge>
+  )
+}
+{/* Tags */ }
+{
+  project.tags && project.tags.length > 0 && (
+    <div className="absolute bottom-2 right-2 flex gap-1">
+      {project.tags.map((tag, index) => (
+        <Badge key={index} className="bg-green-100 text-green-800 border-green-200 text-xs">
+          {tag}
+        </Badge>
+      ))}
+    </div>
+  )
+}
 
-        {/* Status Badge */}
-        {project.status && (
-          <Badge className={`absolute top-2 right-2 ${getStatusColor(project.status)}`}>
-            {project.status}
-          </Badge>
-        )}
-
-        {/* Category Badge */}
-        {project.category && (
-          <Badge variant="outline" className={`absolute top-2 left-2 ${getCategoryColor(project.category)}`}>
-            {project.category}
-          </Badge>
-        )}
-        {/* Tags */}
-        {project.tags && project.tags.length > 0 && (
-          <div className="absolute bottom-2 right-2 flex gap-1">
-            {project.tags.map((tag, index) => (
-              <Badge key={index} className="bg-green-100 text-green-800 border-green-200 text-xs">
-                {tag}
-              </Badge>
-            ))}
-          </div>
-        )}
-
-        {/* Featured Badge */}
-        {featured && (
-          <div className="absolute top-2 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-yellow-900 px-2.5 py-0.5 rounded-full text-xs font-semibold">
-            ⭐ Featured
-          </div>
-        )}
-      </div>
+{/* Featured Badge */ }
+{
+  featured && (
+    <div className="absolute top-2 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-yellow-900 px-2.5 py-0.5 rounded-full text-xs font-semibold">
+      ⭐ Featured
+    </div>
+  )
+}
+      </div >
 
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between">
@@ -173,6 +153,6 @@ export const ProjectCard = ({ project, featured = false, onViewDetails }: Projec
           </div>
         )}
       </CardContent>
-    </Card>
+    </Card >
   );
 };

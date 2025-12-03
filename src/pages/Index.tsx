@@ -19,6 +19,9 @@ import { ChatMessage } from "@/components/ChatMessage";
 import { ThinkingIndicator } from "@/components/ThinkingIndicator";
 import { SuggestionChips } from "@/components/SuggestionChips";
 import { FloatingParticles } from "@/components/FloatingParticles";
+import { GradientBackground } from "@/components/GradientBackground";
+import { MemojiAvatar } from "@/components/hero/MemojiAvatar";
+import { DeepWorkPlayer } from "@/components/DeepWorkPlayer";
 import { GameGrid } from "@/components/games/GameGrid";
 import { TicTacToe } from "@/components/games/TicTacToe";
 import { MemoryMatch } from "@/components/games/MemoryMatch";
@@ -36,6 +39,7 @@ import { Guestbook } from "@/components/Guestbook";
 import { generateResponse } from "@/utils/chatResponses";
 
 const Index = () => {
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
   const [selectedModel, setSelectedModel] = useState("normal");
 
   const apiEndpoint = useMemo(() => {
@@ -89,6 +93,7 @@ const Index = () => {
 
   const [isChatExpanded, setIsChatExpanded] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [showQuickQuestions, setShowQuickQuestions] = useState(true);
   const [currentView, setCurrentView] = useState("home");
   const [selectedGame, setSelectedGame] = useState<string | null>(null);
   const [sidebarKey, setSidebarKey] = useState(0);
@@ -442,9 +447,13 @@ const Index = () => {
   };
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background">
+    <div className="flex h-screen w-full overflow-hidden bg-background relative">
       {/* Animated Background Effects */}
+      <GradientBackground />
       <FloatingParticles />
+      {currentView === "home" && !isChatExpanded && (
+        <DeepWorkPlayer onToggle={setIsMusicPlaying} />
+      )}
 
       {/* Desktop Sidebar - Hidden on mobile */}
       <div className="hidden md:block" key={sidebarKey}>
@@ -586,25 +595,17 @@ const Index = () => {
               className="absolute top-0 left-0 right-0 bottom-0 flex items-center justify-center p-4 md:p-6 overflow-y-auto"
             >
               <div className="text-center space-y-5 md:space-y-7 lg:space-y-9 w-full max-w-4xl px-4 md:px-6 lg:px-8 pb-32 md:pb-0">
-                {/* Keep Smiling Text */}
-                <div className="space-y-3 md:space-y-5 lg:space-y-6 overflow-visible">
+                {/* Hero Section - Memoji Avatar */}
+                <div className="space-y-3 md:space-y-5 lg:space-y-6 overflow-visible flex flex-col items-center">
+                  <MemojiAvatar state={isLoading ? "thinking" : "idle"} isMusicPlaying={isMusicPlaying} />
                   <motion.h1
-                    initial={{ scale: 0.5, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ delay: 0.2, duration: 0.5 }}
-                    className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold bg-gradient-to-r from-accent to-accent/60 bg-clip-text text-transparent leading-tight lg:scale-[0.7] break-words overflow-visible"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4 }}
+                    className="text-2xl md:text-3xl font-medium text-muted-foreground"
                   >
-                    Keep Smiling{" "}
-                    <span className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl"></span>
+                    Hi! I'm Sudhakar.
                   </motion.h1>
-                  <motion.p
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.4, duration: 0.5 }}
-                    className="text-lg md:text-xl lg:text-2xl text-muted-foreground px-2"
-                  >
-                    We are what we repeatedly do
-                  </motion.p>
                 </div>
 
                 {/* Input Box - Claude-style layout (Desktop Only) */}
@@ -702,26 +703,36 @@ const Index = () => {
                     </div>
 
                     {/* Suggestion Chips - Directly below Input Box */}
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.8 }}
-                      className="flex flex-wrap gap-2 md:gap-3 justify-center mt-4 px-1"
-                    >
-                      <SuggestionChips onSelect={handleSuggestionClick} />
-                    </motion.div>
+                    <AnimatePresence>
+                      {showQuickQuestions && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.3 }}
+                          className="flex flex-wrap gap-2 md:gap-3 justify-center mt-4 px-1 overflow-hidden"
+                        >
+                          <SuggestionChips onSelect={handleSuggestionClick} />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 </motion.div>
 
                 {/* Suggestion Chips - For Mobile */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.6 }}
-                  className="flex md:hidden flex-wrap gap-3 md:gap-4 justify-center px-1 pb-4"
-                >
-                  <SuggestionChips onSelect={handleSuggestionClick} />
-                </motion.div>
+                <AnimatePresence>
+                  {showQuickQuestions && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="flex md:hidden flex-wrap gap-3 md:gap-4 justify-center px-1 pb-4 overflow-hidden"
+                    >
+                      <SuggestionChips onSelect={handleSuggestionClick} />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </motion.div>
           )}
@@ -762,12 +773,36 @@ const Index = () => {
                 </Button>
               </div>
               {/* Model Selector - Below input box, right aligned */}
-              <div className="flex justify-end mt-2">
+              <div className="flex justify-between items-center mt-2 px-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowQuickQuestions(!showQuickQuestions)}
+                  className="text-xs text-muted-foreground hover:text-foreground h-7"
+                >
+                  {showQuickQuestions ? "Hide Quick Questions" : "Show Quick Questions"}
+                </Button>
+
                 <ModelSelector
                   selectedModel={selectedModel}
                   onModelChange={setSelectedModel}
                 />
               </div>
+
+              {/* Suggestion Chips in Expanded View */}
+              <AnimatePresence>
+                {showQuickQuestions && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="flex flex-wrap gap-2 justify-start mt-3 px-1 overflow-hidden"
+                  >
+                    <SuggestionChips onSelect={handleSuggestionClick} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
               {/* Refresh and Send Message buttons below input - icon only */}
               <div className="flex gap-2 mt-2 justify-start px-1">
                 <Button

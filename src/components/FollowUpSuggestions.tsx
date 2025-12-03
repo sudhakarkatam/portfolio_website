@@ -23,6 +23,16 @@ export const FollowUpSuggestions = ({ suggestions, onSelect }: FollowUpSuggestio
         const label = linkMatch ? linkMatch[1] : suggestion;
         const url = linkMatch ? linkMatch[2] : null;
 
+        const colors = [
+          { icon: 'text-blue-500 bg-blue-500/10', border: 'border-blue-500/20', hover: 'hover:bg-blue-500/5' },
+          { icon: 'text-purple-500 bg-purple-500/10', border: 'border-purple-500/20', hover: 'hover:bg-purple-500/5' },
+          { icon: 'text-emerald-500 bg-emerald-500/10', border: 'border-emerald-500/20', hover: 'hover:bg-emerald-500/5' },
+          { icon: 'text-orange-500 bg-orange-500/10', border: 'border-orange-500/20', hover: 'hover:bg-orange-500/5' },
+          { icon: 'text-pink-500 bg-pink-500/10', border: 'border-pink-500/20', hover: 'hover:bg-pink-500/5' },
+          { icon: 'text-cyan-500 bg-cyan-500/10', border: 'border-cyan-500/20', hover: 'hover:bg-cyan-500/5' },
+        ];
+        const style = colors[index % colors.length];
+
         return (
           <motion.div
             key={index}
@@ -33,7 +43,7 @@ export const FollowUpSuggestions = ({ suggestions, onSelect }: FollowUpSuggestio
             <Button
               variant="outline"
               size="sm"
-              className="bg-accent/10 hover:bg-accent/20 border-accent/30 text-accent hover:text-accent text-xs md:text-sm h-7 md:h-8 px-2 md:px-3 backdrop-blur-sm transition-all duration-300 touch-manipulation"
+              className={`rounded-full bg-card/50 backdrop-blur-sm shadow-sm transition-all duration-300 text-xs md:text-sm h-8 md:h-9 px-3 md:px-4 touch-manipulation group border ${style.border} ${style.hover}`}
               onClick={() => {
                 if (url) {
                   window.open(url, '_blank', 'noopener,noreferrer');
@@ -42,8 +52,10 @@ export const FollowUpSuggestions = ({ suggestions, onSelect }: FollowUpSuggestio
                 }
               }}
             >
-              <Sparkles className="mr-1 h-3 w-3" />
-              {label}
+              <div className={`p-1 rounded-full mr-1.5 ${style.icon} group-hover:scale-110 transition-transform`}>
+                <Sparkles className="h-3 w-3" />
+              </div>
+              <span className="text-foreground/80 group-hover:text-foreground transition-colors">{label}</span>
             </Button>
           </motion.div>
         );

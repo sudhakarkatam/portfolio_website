@@ -28,18 +28,18 @@ export const FloatingParticles = () => {
     window.addEventListener('resize', resizeCanvas);
 
     // Particle configuration
-    const particleCount = 50;
+    const particleCount = 60;
     const particles: Particle[] = [];
-    const colors = ['rgba(37, 99, 235, 0.3)', 'rgba(59, 130, 246, 0.2)', 'rgba(96, 165, 250, 0.15)'];
+    const colors = ['rgba(37, 99, 235, 0.2)', 'rgba(147, 51, 234, 0.15)', 'rgba(59, 130, 246, 0.1)'];
 
     // Create particles
     for (let i = 0; i < particleCount; i++) {
       particles.push({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.5,
-        vy: (Math.random() - 0.5) * 0.5,
-        radius: Math.random() * 2 + 1,
+        vx: (Math.random() - 0.5) * 0.2, // Slower speed
+        vy: (Math.random() - 0.5) * 0.2, // Slower speed
+        radius: Math.random() * 1.5 + 0.5, // Smaller particles
         color: colors[Math.floor(Math.random() * colors.length)],
       });
     }

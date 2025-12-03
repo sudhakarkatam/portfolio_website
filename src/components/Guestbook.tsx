@@ -181,7 +181,7 @@ export const Guestbook = () => {
             <button
                 onClick={handleOpen}
                 className="md:hidden fixed top-3 right-28 z-50 h-10 w-10 flex items-center justify-center bg-background/80 backdrop-blur-sm border border-border rounded-md shadow-sm hover:bg-accent hover:text-accent-foreground transition-colors"
-                title="Guestbook"
+                title="Sign the Wall"
             >
                 <Book className="h-5 w-5" />
             </button>
@@ -194,10 +194,10 @@ export const Guestbook = () => {
                 whileTap={{ scale: 0.9 }}
                 onClick={handleOpen}
                 className="hidden md:flex fixed bottom-6 right-6 z-40 bg-primary text-primary-foreground p-4 rounded-full shadow-lg hover:shadow-xl transition-shadow items-center gap-2"
-                title="Open Guestbook"
+                title="Sign the Wall"
             >
                 <Book className="h-6 w-6" />
-                <span className="font-semibold">Guestbook</span>
+                <span className="font-semibold">Sign the Wall</span>
             </motion.button>
 
             {/* Fullscreen Overlay */}

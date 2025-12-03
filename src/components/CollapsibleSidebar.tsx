@@ -22,7 +22,7 @@ export const CollapsibleSidebar = ({
   isMobile = false,
 }: CollapsibleSidebarProps) => {
   const [isCollapsed, setIsCollapsed] = useState(true);
-  const [expandedProjects, setExpandedProjects] = useState(true);
+  const [expandedProjects, setExpandedProjects] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -43,11 +43,11 @@ export const CollapsibleSidebar = ({
   };
 
   const navItems = [
-    { id: 'about', label: 'About', icon: User },
-    { id: 'skills', label: 'Skills', icon: Code },
-    { id: 'projects', label: 'Projects', icon: FolderKanban, hasSubmenu: true },
-    { id: 'experience', label: 'Experience', icon: Briefcase },
-    { id: 'games', label: 'Games', icon: Gamepad2, desktopOnly: true },
+    { id: 'about', label: 'About', icon: User, color: 'text-blue-600 dark:text-gray-400 dark:group-hover:text-white' },
+    { id: 'skills', label: 'Skills', icon: Code, color: 'text-purple-600 dark:text-gray-400 dark:group-hover:text-white' },
+    { id: 'projects', label: 'Projects', icon: FolderKanban, hasSubmenu: true, color: 'text-orange-600 dark:text-gray-400 dark:group-hover:text-white' },
+    { id: 'experience', label: 'Experience', icon: Briefcase, color: 'text-emerald-600 dark:text-gray-400 dark:group-hover:text-white' },
+    { id: 'games', label: 'Games', icon: Gamepad2, desktopOnly: true, color: 'text-pink-600 dark:text-gray-400 dark:group-hover:text-white' },
   ];
 
   const toggleProjects = () => setExpandedProjects(!expandedProjects);
@@ -61,7 +61,7 @@ export const CollapsibleSidebar = ({
         width: isMobile ? '100%' : isCollapsed ? '104px' : '384px',
       }}
       transition={{ duration: 0.3 }}
-      className={`flex flex-col relative bg-sidebar border-r border-border
+      className={`flex flex-col relative bg-sidebar/80 backdrop-blur-md border-r border-border/50
         h-screen md:h-full min-h-screen ${!isMobile ? 'hidden md:flex' : 'flex'} ${isMobile ? 'pb-6' : ''}`}
     >
       {/* Collapse Toggle (Desktop Only) */}
@@ -156,7 +156,7 @@ export const CollapsibleSidebar = ({
                 }}
               >
                 <item.icon
-                  className={`${isMobile ? 'h-5 w-5' : 'h-6 w-6'} ${!isCollapsed || isMobile ? 'mr-3' : ''}`}
+                  className={`${isMobile ? 'h-5 w-5' : 'h-6 w-6'} ${!isCollapsed || isMobile ? 'mr-3' : ''} ${item.color}`}
                 />
                 {(!isCollapsed || isMobile) && (
                   <>
@@ -268,7 +268,7 @@ export const CollapsibleSidebar = ({
                   className={`hover:bg-sidebar-accent hover:text-accent transition-all flex-1 ${isMobile ? 'h-8 min-w-[44px] touch-manipulation' : 'h-9'}`}
                   onClick={() => window.open(portfolioData.contact.github, '_blank')}
                 >
-                  <Github className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'}`} />
+                  <Github className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'} text-gray-900 dark:text-gray-400`} />
                 </Button>
               )}
               {portfolioData.contact.linkedin && (
@@ -278,7 +278,7 @@ export const CollapsibleSidebar = ({
                   className={`hover:bg-sidebar-accent hover:text-accent transition-all flex-1 ${isMobile ? 'h-8 min-w-[44px] touch-manipulation' : 'h-9'}`}
                   onClick={() => window.open(portfolioData.contact.linkedin, '_blank')}
                 >
-                  <Linkedin className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'}`} />
+                  <Linkedin className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'} text-blue-700 dark:text-gray-400`} />
                 </Button>
               )}
               {portfolioData.contact.twitter && (
@@ -288,7 +288,7 @@ export const CollapsibleSidebar = ({
                   className={`hover:bg-sidebar-accent hover:text-accent transition-all flex-1 ${isMobile ? 'h-8 min-w-[44px] touch-manipulation' : 'h-9'}`}
                   onClick={() => window.open(portfolioData.contact.twitter, '_blank')}
                 >
-                  <Twitter className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'}`} />
+                  <Twitter className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'} text-sky-500 dark:text-gray-400`} />
                 </Button>
               )}
               <Button
@@ -299,7 +299,7 @@ export const CollapsibleSidebar = ({
                   window.open(`mailto:${portfolioData.contact.email}`, '_blank')
                 }
               >
-                <Mail className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'}`} />
+                <Mail className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'} text-red-500 dark:text-gray-400`} />
               </Button>
             </div>
           </div>

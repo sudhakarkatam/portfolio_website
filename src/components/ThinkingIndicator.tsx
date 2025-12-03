@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Sparkles, Brain } from 'lucide-react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export const ThinkingIndicator = () => {
     return (
@@ -13,6 +13,7 @@ export const ThinkingIndicator = () => {
             <div className="relative">
                 <div className="absolute inset-0 bg-accent/20 rounded-full blur-xl animate-pulse" />
                 <Avatar className="h-8 w-8 md:h-10 md:w-10 border-2 border-accent/30 shadow-glow relative z-10">
+                    <AvatarImage src="/profile_image.jpeg" alt="AI" className="object-cover" />
                     <AvatarFallback className="bg-gradient-to-br from-accent to-accent/60 text-primary-foreground">
                         <Sparkles className="h-4 w-4 md:h-5 md:w-5 animate-pulse" />
                     </AvatarFallback>

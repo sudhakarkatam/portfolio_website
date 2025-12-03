@@ -3,7 +3,7 @@ import { Message } from '@/types/portfolio';
 import { Copy, Check, Sparkles, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FollowUpSuggestions } from './FollowUpSuggestions';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -61,6 +61,7 @@ export const ChatMessage = ({ message, isLast, isStreaming, streamingText, onSug
       {/* AI Avatar */}
       {!isUser && (
         <Avatar className="h-8 w-8 md:h-10 md:w-10 border-2 border-accent/30 shadow-glow">
+          <AvatarImage src="/profile_image.jpeg" alt="AI" className="object-cover" />
           <AvatarFallback className="bg-gradient-to-br from-accent to-accent/60 text-primary-foreground">
             <Sparkles className="h-4 w-4 md:h-5 md:w-5" />
           </AvatarFallback>
