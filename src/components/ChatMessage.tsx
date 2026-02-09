@@ -76,20 +76,20 @@ export const ChatMessage = ({ message, isLast, isStreaming, streamingText, onSug
               : 'chat-bubble-assistant'
               } shadow-md relative`}
           >
-            <div className="text-sm md:text-base break-words leading-relaxed space-y-2 markdown-container">
+            <div className="text-sm md:text-base break-words leading-relaxed space-y-2 markdown-container text-zinc-900 dark:text-zinc-100">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{
-                  h1: ({ ...props }) => <h2 className="text-xl md:text-2xl font-bold text-accent mt-4 mb-2" {...props} />,
-                  h2: ({ ...props }) => <h3 className="text-lg md:text-xl font-bold text-accent mt-4 mb-2" {...props} />,
-                  h3: ({ ...props }) => <h4 className="text-base md:text-lg font-semibold text-foreground mt-3 mb-1" {...props} />,
-                  strong: ({ ...props }) => <span className="font-bold text-accent" {...props} />,
-                  em: ({ ...props }) => <em className="italic text-muted-foreground" {...props} />,
+                  h1: ({ ...props }) => <h2 className="text-xl md:text-2xl font-bold text-zinc-900 dark:text-zinc-50 mt-4 mb-2 border-b border-zinc-200 dark:border-zinc-800 pb-2" {...props} />,
+                  h2: ({ ...props }) => <h3 className="text-lg md:text-xl font-bold text-zinc-900 dark:text-zinc-50 mt-4 mb-2" {...props} />,
+                  h3: ({ ...props }) => <h4 className="text-base md:text-lg font-bold text-zinc-900 dark:text-zinc-100 mt-3 mb-1" {...props} />,
+                  strong: ({ ...props }) => <span className="font-bold text-zinc-900 dark:text-zinc-50" {...props} />,
+                  em: ({ ...props }) => <em className="italic text-zinc-700 dark:text-zinc-300" {...props} />,
                   ul: ({ ...props }) => <ul className="space-y-1 my-2" {...props} />,
                   ol: ({ ...props }) => <ol className="list-decimal list-inside space-y-1 my-2" {...props} />,
                   li: ({ children, ...props }) => (
                     <li className="flex items-start gap-2 ml-2">
-                      <span className="text-accent mt-1.5 text-[0.6rem]">•</span>
+                      <span className="text-zinc-500 mt-1.5 text-[0.6rem]">•</span>
                       <span className="flex-1">{children}</span>
                     </li>
                   ),
