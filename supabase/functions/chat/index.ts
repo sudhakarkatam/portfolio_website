@@ -34,71 +34,63 @@ const openrouter = createOpenAI({
     },
 });
 
-// --- OLD SYSTEM: IN-MEMORY CACHE (COMMENTED OUT FOR REDIS MIGRATION) ---
-// To Revert: Uncomment this block and remove the Redis logic below.
-/*
-// GLOBAL CACHE (Survives in memory between requests)
-// To DISABLE caching (Revert to old system), set CACHE_TTL = 0
-const CACHE_TTL = 5 * 60 * 1000; // 5 Minutes
-let globalCache = {
-    data: null as any,
-    timestamp: 0
-};
-*/
-// -----------------------------------------------------------------------
-
 // Helper to fetch System Context (Redis/DB) - PARALLELIZABLE
 const fetchSystemContext = async (model?: string) => {
     let appSettings, modelContexts;
     if (!supabase) return { appSettings: null, modelContexts: null };
 
     try {
-        // --- NEW SYSTEM: REDIS CACHE 🚀 ---
+        // --- REDIS CACHING IMPLEMENTATION ---
         const redisUrl = Deno.env.get('UPSTASH_REDIS_REST_URL');
         const redisToken = Deno.env.get('UPSTASH_REDIS_REST_TOKEN');
+        let redis: Redis | null = null;
 
         if (redisUrl && redisToken) {
-            const redis = new Redis({ url: redisUrl, token: redisToken });
-
-            // Try to get from Redis
-            const cachedData = await redis.get('chat_context');
-
-            if (cachedData) {
-                console.log("⚡ Using Redis Cached Context");
-                ({ appSettings, modelContexts } = cachedData as any);
-            } else {
-                console.log("🐢 Redis Cache Empty. Fetching from DB...");
-                // Fetch from DB
-                const [settingsResult, contextsResult] = await Promise.all([
-                    supabase.from("app_settings").select("*").eq("key", "system_prompt"),
-                    supabase.from("model_contexts").select("*")
-                ]);
-
-                appSettings = settingsResult;
-                modelContexts = contextsResult;
-
-                // Save to Redis (Expire in 10 mins = 600s)
-                await redis.set('chat_context', { appSettings, modelContexts }, { ex: 600 });
-            }
+            redis = new Redis({ url: redisUrl, token: redisToken });
         } else {
-            console.warn("⚠️ Redis Credentials missing. Falling back to DB.");
+            console.warn("⚠️ UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_TOKEN missing. Redis caching disabled.");
         }
-    } catch (err) {
-        console.error("Redis Error (Falling back to DB):", err);
-    }
 
-    // Fallback if Redis failed/missing and we haven't fetched yet
-    if (!appSettings && !modelContexts) {
-        console.log("⚠️ Fetching from DB (Redis skipped)...");
+        // Attempt to fetch from Redis first
+        if (redis) {
+            try {
+                const cacheKey = `system_context:${model || 'default'}`;
+                const cachedData = await redis.get(cacheKey);
+                if (cachedData) {
+                    console.log("⚡ Using Redis Cached Context");
+                    return cachedData as { appSettings: any, modelContexts: any };
+                }
+            } catch (err) {
+                console.error("Redis Read Error:", err);
+            }
+        }
+
+        console.log("🐢 Redis Cache Empty or Disabled. Fetching from DB...");
+
+        // Fetch from DB
         const [settingsResult, contextsResult] = await Promise.all([
             supabase.from("app_settings").select("*").eq("key", "system_prompt"),
             supabase.from("model_contexts").select("*")
         ]);
+
         appSettings = settingsResult;
         modelContexts = contextsResult;
-    }
 
-    return { appSettings, modelContexts };
+        // Save to Redis (Expire in 10 mins = 600s)
+        if (redis && appSettings && modelContexts) {
+            try {
+                const cacheKey = `system_context:${model || 'default'}`;
+                await redis.set(cacheKey, { appSettings, modelContexts }, { ex: 600 });
+                console.log("💾 Saved context to Redis");
+            } catch (err) {
+                console.error("Redis Write Error:", err);
+            }
+        }
+
+        return { appSettings, modelContexts };
+    } finally {
+        // No explicit close needed for Upstash Redis REST client as it's stateless.
+    }
 };
 
 // Helper to Build System Prompt (Pure Function)
@@ -109,15 +101,25 @@ const buildSystemPrompt = (context: string, appSettings: any, modelContexts: any
     - Name: Sudhakar Reddy Katam
     `;
 
-    let customInstructions = `
-    You are a helpful and friendly AI assistant for Sudhakar Reddy Katam's portfolio website.
-    Your PRIMARY role is to represent Sudhakar and answer questions about HIS projects, skills, and experience.
-
+    const strictRules = `
     CRITICAL RULES:
     1. YOU ARE NOT Sudhakar. You are his AI assistant.
     2. NEVER invent or hallucinate a name for yourself or the portfolio owner. The owner is ALWAYS Sudhakar Reddy Katam.
     3. If asked "Who are you?", say "I am Sudhakar's AI portfolio assistant."
     4. If asked "Who is this?", describe Sudhakar based on the identity above.
+    
+    ⚠️ **STRICT ANTI-HALLUCINATION & REAL DATA POLICY** ⚠️
+    - **SOURCE OF TRUTH**: The "context" section below is populated with REAL DATA from the database tables (\`projects\`, \`skills\`, \`experience\`, \`contact_info\`, etc.).
+    - **CHECK ALL TABLES**: When a user asks a question, you MUST check all relevant sections of the context (Projects, Skills, Experience) to find the answer.
+    - **REAL DATA ONLY**: Use ONLY the specific details, numbers, and URLs provided in these context tables.
+    - **NO FAKE LINKS**: If a GitHub link, Demo URL, or Project Title is NOT in the context, DO NOT INVENT ONE.
+    - **NO FAKE PROJECTS**: Do not describe a project unless it exists in the \`projects\` table data provided in context.
+    - **CHECK URLS**: Precisely copy URLs from the context. Do not "guess" a URL like "github.com/sudhakar/project-name". If it's not provided, say "I don't have the link for that."
+    `;
+
+    let customInstructions = `
+    You are a helpful and friendly AI assistant for Sudhakar Reddy Katam's portfolio website.
+    Your PRIMARY role is to represent Sudhakar and answer questions about HIS projects, skills, and experience.
     `;
 
     // Apply Global Context
@@ -126,6 +128,9 @@ const buildSystemPrompt = (context: string, appSettings: any, modelContexts: any
     } else if (appSettings?.error) {
         console.warn("⚠️ Failed to fetch system_prompt from Supabase:", appSettings.error.message);
     }
+
+    // Combine: Identity + Custom (DB) + Strict Rules
+    customInstructions = `${customInstructions}\n\n${strictRules}`;
 
     // Apply Model Specific Context
     if (modelContexts?.data && model) {
@@ -184,6 +189,7 @@ Instructions:
         - **NEVER** make up quotes or success stories.
         - If you are unsure, admit it. It is better to be honest than to hallucinate.
 `;
+
     // 3. Add Suggestions Instructions
     systemPrompt += `
 \n\nIMPORTANT: You must provide suggestions for follow-up questions.
@@ -285,17 +291,8 @@ Deno.serve(async (req) => {
     }
 
     try {
-        const { messages, model, type } = await req.json();
+        let { messages, model, type } = await req.json(); // Changed to let for fallback assignment
         console.time("Total Execution");
-
-        // 0. HANDLE KEEP-ALIVE PING (COMMENTED OUT FOR REDIS MIGRATION)
-        /*
-        if (type === 'ping') {
-            return new Response(JSON.stringify({ message: 'pong' }), {
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
-        }
-        */
 
         if (!messages || !Array.isArray(messages)) {
             return new Response(JSON.stringify({ error: 'Invalid messages format' }), {
@@ -338,7 +335,7 @@ Deno.serve(async (req) => {
 
                 let fallbackContextParts = [];
 
-                // Custom Context (from app_settings - GLOBAL) - ALREADY FETCHED IN PARALLEL
+                // Custom Context (from app_settings - GLOBAL)
                 if (appSettings?.data) {
                     const customContext = appSettings.data.find((s: any) => s.key === 'system_prompt')?.value;
                     if (customContext) {
@@ -346,7 +343,7 @@ Deno.serve(async (req) => {
                     }
                 }
 
-                // Model Specific Context (from model_contexts) - ALREADY FETCHED IN PARALLEL
+                // Model Specific Context
                 if (modelContexts?.data) {
                     const provider = (model && model.includes('gemini')) ? 'gemini' : 'openrouter';
                     const modelContext = modelContexts.data.find((c: any) => c.provider === provider)?.content;
@@ -431,10 +428,90 @@ Image URL: ${img.url}
         console.timeEnd("Build System Prompt");
 
         // 3. Select Model and Generate Response
-        if (model && !model.includes('gemini')) {
-            // --- OPENROUTER IMPLEMENTATION (Direct Fetch) ---
-            // We use direct fetch to bypass SDK validation issues with multimodal content
+        let useOpenRouter = (model && !model.includes('gemini'));
 
+        // --- GEMINI IMPLEMENTATION (SDK) ---
+        if (!useOpenRouter) {
+            try {
+                // Use Gemini SDK
+                const selectedModel = google('gemini-2.5-flash');
+                const result = await streamText({
+                    model: selectedModel,
+                    system: systemPrompt,
+                    messages: messages, // Gemini SDK checks multimodal content automatically
+                });
+
+                // Manual Stream Construction for Gemini
+                const stream = new ReadableStream({
+                    async start(controller) {
+                        const encoder = new TextEncoder();
+                        let fullText = "";
+                        try {
+                            for await (const textPart of result.textStream) {
+                                fullText += textPart;
+                                try {
+                                    controller.enqueue(encoder.encode(`0:${JSON.stringify(textPart)}\n`));
+                                } catch (e) {
+                                    console.warn("⚠️ Client disconnected during stream enqueue. Stopping.");
+                                    return; // Stop processing
+                                }
+                            }
+                            try {
+                                controller.close();
+                            } catch (e) { /* Ignore if already closed */ }
+
+                            // Log to Supabase
+                            if (supabaseAdmin) {
+                                await supabaseAdmin.from('chat_logs').insert({
+                                    user_message: userQuery,
+                                    ai_response: fullText,
+                                    session_id: 'anonymous',
+                                    model: 'gemini-2.5-flash',
+                                });
+                            }
+                        } catch (err) {
+                            console.error('Stream processing error:', err);
+                            try {
+                                controller.error(err);
+                            } catch (e) { /* Ignore */ }
+                        }
+                    }
+                });
+
+                return new Response(stream, {
+                    headers: {
+                        ...corsHeaders,
+                        'Content-Type': 'text/plain; charset=utf-8',
+                        'X-Vercel-AI-Data-Stream': 'v1'
+                    }
+                });
+
+            } catch (err: any) {
+                console.error("⚠️ Gemini SDK Failed:", err);
+
+                // Check for Quota/Rate Limit errors
+                if (err.message?.includes('429') || err.message?.includes('Quota exceeded') || err.name === 'AI_RetryError') {
+                    return new Response(JSON.stringify({
+                        error: "Quota exceeded for Gemini Flash. Please select a different model (e.g., DeepSeek or Gemini Pro) from the settings."
+                    }), {
+                        status: 429,
+                        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                    });
+                }
+
+                // For other errors, we might still want to try OpenRouter, or just fail. 
+                // User asked to "show message", so we will just fail gracefully for now.
+                return new Response(JSON.stringify({
+                    error: `Gemini Error: ${err.message || 'Unknown error'}. Please try another model.`
+                }), {
+                    status: 500,
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                });
+            }
+        }
+
+        // --- OPENROUTER IMPLEMENTATION (Direct Fetch) ---
+        if (useOpenRouter) {
             // 1. Sanitize messages (Strict String Content)
             const sanitizedMessages = sanitizeMessages(messages)
                 .filter((m) => ["user", "assistant", "system"].includes(m.role))
@@ -453,6 +530,16 @@ Image URL: ${img.url}
 
             // 3. Direct API Call
             console.time("OpenRouter API Call");
+
+            const requestBody = {
+                model: model, // No default fallback here, relies on passed model or logic above
+                messages: finalMessages,
+                stream: true
+            };
+
+            // Console Log Preview for Debugging
+            console.log("🚀 Request Body (Preview):", JSON.stringify({ ...requestBody, messages: finalMessages.map(m => ({ role: m.role, contentLength: m.content.length })) }));
+
             const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
                 method: "POST",
                 headers: {
@@ -461,18 +548,14 @@ Image URL: ${img.url}
                     "X-Title": "Sudhakar Portfolio AI Chat",
                     "Content-Type": "application/json"
                 },
-                body: JSON.stringify({
-                    model: model,
-                    messages: finalMessages,
-                    stream: true
-                })
+                body: JSON.stringify(requestBody)
             });
             console.timeEnd("OpenRouter API Call");
 
             if (!response.ok) {
                 const errText = await response.text();
                 console.error("OpenRouter API Error:", errText);
-                throw new Error(`OpenRouter API Error: ${response.status} ${response.statusText}`);
+                throw new Error(`OpenRouter API Error: ${response.status} ${response.statusText} - Details: ${errText}`);
             }
 
             // 4. Transform SSE Stream to Data Stream Protocol v1
@@ -506,7 +589,12 @@ Image URL: ${img.url}
                                         if (content) {
                                             fullText += content;
                                             // Format: 0:"content"\n (Data Stream Protocol v1)
-                                            controller.enqueue(encoder.encode(`0:${JSON.stringify(content)}\n`));
+                                            try {
+                                                controller.enqueue(encoder.encode(`0:${JSON.stringify(content)}\n`));
+                                            } catch (err) {
+                                                console.warn("⚠️ Client disconnected during stream enqueue. Stopping.");
+                                                return; // Stop processing
+                                            }
                                         }
                                     } catch (e) {
                                         console.error('Error parsing OpenRouter SSE:', e);
@@ -514,7 +602,10 @@ Image URL: ${img.url}
                                 }
                             }
                         }
-                        controller.close();
+
+                        try {
+                            controller.close();
+                        } catch (e) { /* Ignore if already closed */ }
 
                         // Log to Supabase after stream finishes
                         if (supabaseAdmin) {
@@ -532,56 +623,9 @@ Image URL: ${img.url}
 
                     } catch (err) {
                         console.error('Stream processing error:', err);
-                        controller.error(err);
-                    }
-                }
-            });
-
-            return new Response(stream, {
-                headers: {
-                    ...corsHeaders,
-                    'Content-Type': 'text/plain; charset=utf-8',
-                    'X-Vercel-AI-Data-Stream': 'v1'
-                }
-            });
-
-        } else {
-            // --- GEMINI IMPLEMENTATION (SDK) ---
-            // Gemini works well with the SDK, so we keep it.
-
-            const selectedModel = google('gemini-2.5-flash');
-
-            // Generate Stream
-            const result = await streamText({
-                model: selectedModel,
-                system: systemPrompt,
-                messages: messages, // Gemini SDK handles multimodal content better
-            });
-
-            // Manual Stream Construction for Gemini
-            const stream = new ReadableStream({
-                async start(controller) {
-                    const encoder = new TextEncoder();
-                    let fullText = "";
-                    try {
-                        for await (const textPart of result.textStream) {
-                            fullText += textPart;
-                            controller.enqueue(encoder.encode(`0:${JSON.stringify(textPart)}\n`));
-                        }
-                        controller.close();
-
-                        // Log to Supabase
-                        if (supabaseAdmin) {
-                            await supabaseAdmin.from('chat_logs').insert({
-                                user_message: userQuery,
-                                ai_response: fullText,
-                                session_id: 'anonymous',
-                                model: 'gemini-2.5-flash',
-                            });
-                        }
-                    } catch (err) {
-                        console.error('Stream error:', err);
-                        controller.error(err);
+                        try {
+                            controller.error(err);
+                        } catch (e) { /* Ignore */ }
                     }
                 }
             });

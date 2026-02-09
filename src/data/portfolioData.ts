@@ -3,7 +3,7 @@ import { PortfolioData, ProjectDetail } from "@/types/portfolio";
 export const portfolioData: PortfolioData = {
   name: "Sudhakar Reddy Katam",
   title: "Aspiring Software Engineer | Building with AI & Web",
-  bio: `I am a Computer Science graduate passionate about building web and mobile applications, both for users and personal projects  you can find some of them in my projects and if you like msg me it will motivate me building more projects. A quick learner, I focus on writing clean, maintainable code and crafting user experiences that make an impact. I constantly explore modern technologies and AI integration to deliver smart, efficient solutions..`,
+  bio: "I'm a developer who loves learning by building. You'll usually find me working on something new. I'm comfortable across the full stack and I like pushing myself to learn and build things that actually matter. I am curious about tech and trying every possible new tech comes out there.",
 
   skills: [
     { name: "React", category: "Frontend", icon: "Code2" },
@@ -14,12 +14,11 @@ export const portfolioData: PortfolioData = {
     },
     { name: "Java", category: "Backend", icon: "Coffee" },
     { name: "HTML5/CSS3", category: "Frontend", icon: "Code2" },
-    { name: "Redux", category: "Frontend", icon: "Layers" },
     { name: "Node.js", category: "Backend", icon: "Server" },
     { name: "Python", category: "Backend", icon: "Code" },
     { name: "Spring Boot", category: "Backend", icon: "Coffee" },
 
-    { name: "PostgreSQL", category: "Database", icon: "Database" },
+
     { name: "MySQL", category: "Database", icon: "Database" },
     { name: "Supabase", category: "Database", icon: "Database" },
     { name: "Firebase", category: "Database", icon: "Flame" },
@@ -90,7 +89,7 @@ export const portfolioData: PortfolioData = {
       id: "2",
       title: "Financial Calculators App",
       description:
-        "A multi-calculator Progressive Web App providing various finance-related tools such as SIP, SWP, Compound Interest, and Loan EMI calculators. Built with a mobile-first design for a native-like experience on Android and iOS, integrated via Capacitor and optimized for performance.",
+        "A multi-calculator Progressive Web App providing various finance-related tools such as SIP, SWP, Compound Interest, and Loan EMI calculators. Built with a mobile-first design for Android live on playstore and iOS in future develoments, integrated via Capacitor and optimized for performance.",
       technologies: [
         "React",
         "TypeScript",
@@ -411,6 +410,8 @@ export const portfolioData: PortfolioData = {
     github: "https://github.com/sudhakarkatam",
     linkedin: "https://www.linkedin.com/in/sudhakar-katam",
     twitter: "https://x.com/sudhakarkatam2",
+    telegram: "https://t.me/Sudha7248",
+    discord: "https://discord.com/users/sudhakar0379",
     resume:
       "https://drive.google.com/file/d/1qNzycHvflNO2lLynBD3ao9udHO0bJIYJ/view?usp=sharing", // Add your resume link here (Google Drive, PDF link, etc.)
   },

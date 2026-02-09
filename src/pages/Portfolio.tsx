@@ -1,47 +1,45 @@
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import { portfolioData } from "@/data/portfolioData";
-import { GitHubCalendar } from 'react-github-calendar';
-import { Tooltip } from 'react-tooltip';
 import {
   Mail,
   Github,
   Linkedin,
   Twitter,
   ArrowUpRight,
-  Download,
-  Share2,
-  Globe,
-  Sun,
-  Moon,
-  MessageSquare,
-  Star,
-  GitFork,
   Code2,
-  Award,
-  Box,
+  Terminal,
+  Cpu,
+  Globe,
+  Database,
+  Layout,
   Server,
-  Code,
-  Layers,
-  Flame,
-  GitBranch,
+  Smartphone,
   Cloud,
-  Bot,
-  FileCode,
-  Coffee,
-  Database
+  Building2,
+  MapPin,
+  ArrowRight,
+  ExternalLink,
+  Target,
+  Calculator,
+  ShoppingCart,
+  Share2,
+  Briefcase,
+  FolderGit2
 } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import {
-  FaReact, FaJava, FaNodeJs, FaPython, FaGitAlt, FaGithub, FaDocker, FaAws, FaHtml5, FaCss3, FaAndroid
-} from "react-icons/fa";
+  FaReact, FaJava, FaNodeJs, FaPython, FaGitAlt, FaGithub, FaDocker, FaAws, FaHtml5, FaCss3, FaAndroid, FaLinkedin, FaXTwitter, FaDiscord, FaTelegram
+} from "react-icons/fa6";
+import { MdEmail } from "react-icons/md";
 import {
   SiJavascript, SiTypescript, SiRedux, SiSpringboot, SiPostgresql, SiMysql, SiSupabase, SiFirebase, SiTailwindcss, SiNextdotjs, SiMongodb, SiExpress, SiSvelte, SiNuxtdotjs, SiSass, SiVercel, SiCapacitor, SiVite
 } from "react-icons/si";
-import { TbBrandNextjs } from "react-icons/tb";
 import { BiBrain } from "react-icons/bi";
+import bannerImage from "@/assets/portfolio-banner.png";
+import { MessageSquare } from "lucide-react";
 
-// Map skill names to React Icons
+// --- Icons & Colors Configuration ---
 const skillIcons: Record<string, any> = {
   "react": FaReact,
   "javascript": SiJavascript,
@@ -61,7 +59,6 @@ const skillIcons: Record<string, any> = {
   "github": FaGithub,
   "docker": FaDocker,
   "aws": FaAws,
-  //"vs code": SiVisualstudiocode,
   "ai tools": BiBrain,
   "tailwind css": SiTailwindcss,
   "next.js": SiNextdotjs,
@@ -76,429 +73,414 @@ const skillIcons: Record<string, any> = {
   "android": FaAndroid
 };
 
-// Color for each skill
-const iconColors: Record<string, string> = {
-  "react": "#61DAFB",
-  "javascript": "#F7DF1E",
-  "typescript": "#3178C6",
-  "java": "#E76F00",
-  "html5": "#E34F26",
-  "css3": "#1572B6",
-  "redux": "#764ABC",
-  "node.js": "#339933",
-  "python": "#3776AB",
-  "spring boot": "#6DB33F",
-  "postgresql": "#336791",
-  "mysql": "#4479A1",
-  "supabase": "#3ecf8e",
-  "firebase": "#FFCA28",
-  "git": "#F05032",
-  "github": "#000000",
-  "docker": "#2496ED",
-  "aws": "#FF9900",
-  "android": "#3DDC84",
-  "ai tools": "#9b59b6",
-  "tailwind css": "#38BDF8",
-  "next.js": "#000000",
-  "mongodb": "#47A248",
-  "express.js": "#000000",
-  "svelte": "#FF3E00",
-  "nuxt.js": "#00DC82",
-  "sass": "#CC6699",
-  "vercel": "#000000",
-  "capacitor": "#119EFF",
-  "vite": "#646CFF"
+const skillColors: Record<string, { bg: string; text: string; icon: string }> = {
+  "react": { bg: "bg-[#0b1b2b]", text: "text-[#61DAFB]", icon: "text-[#61DAFB]" },
+  "javascript": { bg: "bg-[#1f1d0b]", text: "text-[#F7DF1E]", icon: "text-[#F7DF1E]" },
+  "typescript": { bg: "bg-[#0f1b2c]", text: "text-[#3178C6]", icon: "text-[#3178C6]" },
+  "java": { bg: "bg-[#1b100b]", text: "text-[#E76F00]", icon: "text-[#E76F00]" },
+  "html5": { bg: "bg-[#1b0d0a]", text: "text-[#E34F26]", icon: "text-[#E34F26]" },
+  "css3": { bg: "bg-[#0c1324]", text: "text-[#1572B6]", icon: "text-[#1572B6]" },
+  "redux": { bg: "bg-[#110d1b]", text: "text-[#764ABC]", icon: "text-[#764ABC]" },
+  "node.js": { bg: "bg-[#0e160e]", text: "text-[#339933]", icon: "text-[#339933]" },
+  "python": { bg: "bg-[#0e161c]", text: "text-[#3776AB]", icon: "text-[#3776AB]" },
+  "spring boot": { bg: "bg-[#0e160e]", text: "text-[#6DB33F]", icon: "text-[#6DB33F]" },
+  "postgresql": { bg: "bg-[#0f161e]", text: "text-[#336791]", icon: "text-[#336791]" },
+  "mysql": { bg: "bg-[#001d26]", text: "text-[#00758F]", icon: "text-[#00758F]" },
+  "supabase": { bg: "bg-[#0a1612]", text: "text-[#3ECF8E]", icon: "text-[#3ECF8E]" },
+  "firebase": { bg: "bg-[#1f1a08]", text: "text-[#FFCA28]", icon: "text-[#FFCA28]" },
+  "git": { bg: "bg-[#1c0e0b]", text: "text-[#F05032]", icon: "text-[#F05032]" },
+  "github": { bg: "bg-[#24292e]", text: "text-white", icon: "text-white" },
+  "docker": { bg: "bg-[#0b1b2b]", text: "text-[#2496ED]", icon: "text-[#2496ED]" },
+  "aws": { bg: "bg-[#1c1309]", text: "text-[#FF9900]", icon: "text-[#FF9900]" },
+  "tailwind css": { bg: "bg-[#0b1b26]", text: "text-[#38B2AC]", icon: "text-[#38B2AC]" },
+  "next.js": { bg: "bg-black", text: "text-white", icon: "text-white" },
+  "mongodb": { bg: "bg-[#0a140d]", text: "text-[#47A248]", icon: "text-[#47A248]" },
+  "express.js": { bg: "bg-black", text: "text-white", icon: "text-white" },
+  "android": { bg: "bg-[#0d1611]", text: "text-[#3DDC84]", icon: "text-[#3DDC84]" },
+  "default": { bg: "bg-[#1C1C1C]", text: "text-zinc-400", icon: "text-zinc-400" }
 };
 
-const TechBadge = ({ name, theme }: { name: string; theme: string }) => {
-  // Normalize name to match keys
-  const normalizedName = name.toLowerCase().replace(" & ", " ").split("/")[0].trim();
-  // Try to find exact match or partial match
-  const iconKey = Object.keys(skillIcons).find(key => normalizedName.includes(key) || key.includes(normalizedName));
-  const Icon = iconKey ? skillIcons[iconKey] : LucideIcons.Code2;
-  const color = iconKey ? iconColors[iconKey] : (theme === "dark" ? "#ffffff" : "#000000");
+// --- Reference UI Components ---
+
+function cn(...inputs: (string | undefined | null | false)[]) {
+  return inputs.filter(Boolean).join(" ");
+}
+
+function RefCard({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="card"
+      className={cn(
+        "bg-[#0f0f0f] text-[#eaeaea] flex flex-col gap-6 rounded-xl border border-[#1f1f1f] py-6 shadow-sm relative overflow-hidden",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+function RefCardHeader({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="card-header"
+      className={cn(
+        "grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 px-6 has-[[data-slot=card-action]]:grid-cols-[1fr_auto] border-b border-[#1f1f1f] pb-6",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+function RefCardTitle({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="card-title"
+      className={cn("leading-none font-semibold text-[#eaeaea]", className)}
+      {...props}
+    />
+  )
+}
+
+function RefCardAction({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="card-action"
+      className={cn(
+        "col-start-2 row-span-2 row-start-1 self-start justify-self-end",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+function RefCardContent({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="card-content"
+      className={cn("px-6 text-[#9a9a9a]", className)}
+      {...props}
+    />
+  )
+}
+
+function RefCardFooter({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="card-footer"
+      className={cn("flex items-center px-6 pt-6 border-t border-[#1f1f1f]", className)}
+      {...props}
+    />
+  )
+}
+
+function RefButton({ className, variant = "default", size = "default", ...props }: React.ComponentProps<"button"> & { variant?: "default" | "outline" | "ghost", size?: "default" | "icon" | "sm" }) {
+  const variants = {
+    default: "bg-[#eaeaea] text-black hover:bg-[#eaeaea]/90",
+    outline: "border border-[#1f1f1f] bg-transparent hover:bg-[#141414] text-[#eaeaea]",
+    ghost: "hover:bg-[#141414] text-[#eaeaea]"
+  }
+  const sizes = {
+    default: "h-9 px-4 py-2",
+    sm: "h-8 rounded-md px-3 text-xs",
+    icon: "h-9 w-9"
+  }
+  return (
+    <button
+      className={cn(
+        "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all outline-none disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 shrink-0",
+        variants[variant],
+        sizes[size],
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+
+const ScrollIndicator = ({ activeSection }: { activeSection: string }) => {
+  const navItems = ["Home", "Projects", "Contact"];
+
+  const scrollToSection = (id: string) => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth" });
+    }
+  };
 
   return (
-    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all cursor-default ${theme === 'dark'
-      ? 'bg-zinc-800/50 text-zinc-300 border-white/10 hover:bg-zinc-800 hover:text-white'
-      : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:text-gray-900 shadow-sm'
-      }`}>
-      <Icon size={14} style={{ color }} />
-      {name}
-    </span>
+    <div className="hidden xl:flex fixed left-12 top-1/2 -translate-y-1/2 flex-col gap-6 z-50">
+      {navItems.map((item) => {
+        const id = item.toLowerCase();
+        const isActive = activeSection === id;
+
+        return (
+          <button
+            key={item}
+            onClick={() => scrollToSection(id)}
+            className="group flex items-center gap-4 outline-none"
+          >
+            <span className={`
+               text-xs tracking-widest uppercase transition-all duration-300
+               ${isActive ? "text-white font-semibold" : "text-zinc-500 group-hover:text-zinc-300"}
+             `}>
+              {item}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
+const ConnectFooter = ({ contact }: { contact: typeof portfolioData.contact }) => {
+  const socialLinks = [
+    { name: "GitHub", url: contact.github, user: "@sudhakarkatam", icon: FaGithub },
+    { name: "Twitter", url: contact.twitter, user: "@sudhakarkatam2", icon: FaXTwitter },
+    { name: "LinkedIn", url: contact.linkedin, user: "Sudhakar Katam", icon: FaLinkedin },
+    { name: "Discord", url: "https://discord.com/users/sudhakar0379", user: "sudhakar0379", icon: FaDiscord },
+    { name: "Telegram", url: "https://t.me/Sudha7248", user: "Sudha7248", icon: FaTelegram },
+  ];
+
+  return (
+    <footer id="contact" className="py-12 border-t border-dashed border-zinc-900">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24">
+        {/* Left Column */}
+        <div className="space-y-8">
+          <h2 className="text-3xl font-bold text-white tracking-tight">Let's Connect</h2>
+          <p className="text-zinc-400 text-lg leading-relaxed max-w-md">
+            Open to collaborations, full-time roles, and interesting problems.
+            The fastest way to reach me is email.
+          </p>
+
+          <div className="flex flex-col gap-4">
+            <div className="inline-flex max-w-fit items-center gap-3 px-5 py-3 bg-zinc-900/50 border border-zinc-800 rounded-xl group hover:border-zinc-700 transition-colors cursor-pointer"
+              onClick={() => {
+                navigator.clipboard.writeText(contact.email);
+              }}
+            >
+              <MdEmail className="text-zinc-400 group-hover:text-white transition-colors" size={20} />
+              <span className="text-zinc-300 font-medium group-hover:text-white transition-colors">{contact.email}</span>
+              <span className="text-xs text-zinc-600 ml-2 group-hover:text-zinc-500">Click to copy</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column - Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {socialLinks.map((link) => (
+            link.url && (
+              <a
+                key={link.name}
+                href={link.url}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center justify-between p-4 bg-[#0A0A0A] border border-zinc-800 rounded-xl hover:border-zinc-700 hover:bg-zinc-900/50 transition-all group"
+              >
+                <div>
+                  <div className="text-zinc-400 text-xs mb-1">{link.name}</div>
+                  <div className="text-zinc-200 text-sm font-medium">{link.user}</div>
+                </div>
+                <link.icon className="text-zinc-600 group-hover:text-white transition-colors" size={18} />
+              </a>
+            )
+          ))}
+
+          <a href="https://buymeacoffee.com/sudhakarkatam" target="_blank" rel="noreferrer" className="flex items-center justify-between p-4 bg-[#0A0A0A] border border-zinc-800 rounded-xl hover:border-zinc-700 hover:bg-zinc-900/50 transition-all group">
+            <div>
+              <div className="text-zinc-400 text-xs mb-1">Support</div>
+              <div className="text-zinc-200 text-sm font-medium">Buy Me a Coffee</div>
+            </div>
+            <span className="text-xl grayscale group-hover:grayscale-0 transition-all">☕</span>
+          </a>
+        </div>
+      </div>
+    </footer>
   );
 };
 
 const Portfolio = () => {
-  const { name, title, bio, skills, projects, experience, contact } = portfolioData;
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [repoStats, setRepoStats] = useState<Record<string, { stars: number; forks: number }>>({});
-  const githubUsername = contact.github ? contact.github.split('/').pop() : 'sudhakarkatam';
+  const { name, bio, skills, projects, experience, contact } = portfolioData;
+  const [activeSection, setActiveSection] = useState("home");
 
+  // Force dark mode implementation
   useEffect(() => {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [theme]);
+    document.documentElement.classList.add('dark');
+    document.body.style.backgroundColor = '#0b0b0b';
+    document.body.style.color = '#eaeaea';
+  }, []);
 
-  // Fetch GitHub repo stats
+  // Scroll Spy logic
   useEffect(() => {
-    const fetchRepoData = async () => {
-      const repos = [
-        "finance_cal",
-        "tracker22",
-        "portfolio_website",
-        "droply_app",
-        "Jobfinder-hub"
-      ];
-      const stats: Record<string, { stars: number; forks: number }> = {};
+    const handleScroll = () => {
+      const sections = ["home", "projects", "contact"];
+      const scrollPosition = window.scrollY + 200;
 
-      for (const repo of repos) {
-        try {
-          const res = await fetch(`https://api.github.com/repos/${githubUsername}/${repo}`);
-          if (res.ok) {
-            const data = await res.json();
-            stats[repo] = { stars: data.stargazers_count, forks: data.forks_count };
-          } else {
-            stats[repo] = { stars: 0, forks: 0 };
-          }
-        } catch (e) {
-          console.error(`Failed to fetch stats for ${repo}`, e);
-          stats[repo] = { stars: 0, forks: 0 };
+      for (const section of sections) {
+        const element = document.getElementById(section);
+        if (element && element.offsetTop <= scrollPosition && (element.offsetTop + element.offsetHeight) > scrollPosition) {
+          setActiveSection(section);
+          break;
         }
       }
-      setRepoStats(stats);
     };
-    fetchRepoData();
-  }, [githubUsername]);
 
-  // Filter out Education, keep Work and Virtual Internship
-  const workExperience = experience.filter(exp => exp.type !== "Education");
-
-  const getIconComponent = (iconName: string) => {
-    const Icon = (LucideIcons as any)[iconName];
-    return Icon || LucideIcons.Code;
-  };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${theme === 'dark' ? 'bg-[#0A0A0A] text-white' : 'bg-white text-gray-900'
-      }`}>
-      {/* Theme Toggle & Chat Button */}
-      <div className="fixed top-6 right-6 z-50 flex items-center gap-3">
-        <a
-          href="/"
-          className={`p-3 rounded-full shadow-lg transition-all hover:scale-105 active:scale-95 flex items-center gap-2 font-medium text-sm ${theme === 'dark'
-            ? 'bg-blue-600 text-white hover:bg-blue-500'
-            : 'bg-black text-white hover:bg-gray-800'
-            }`}
-        >
-          <MessageSquare size={18} />
-          <span className="hidden sm:inline">Chat with AI</span>
-        </a>
-        <button
-          onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}
-          className={`p-3 rounded-full shadow-lg transition-all hover:scale-105 ${theme === 'dark'
-            ? 'bg-zinc-800 text-white hover:bg-zinc-700'
-            : 'bg-white text-gray-900 hover:bg-gray-50 border border-gray-200'
-            }`}
-        >
-          {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-        </button>
-      </div>
+    <div className="min-h-screen bg-[#0b0b0b] text-[#eaeaea] font-sans selection:bg-[#eaeaea]/20">
 
-      <div className="max-w-[1400px] mx-auto px-6 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-8">
+      <ScrollIndicator activeSection={activeSection} />
 
-          {/* LEFT SIDEBAR */}
-          <div className="space-y-6">
+      <div className="mx-auto max-w-[1200px] px-4 sm:px-6 md:px-12 py-6 md:py-12">
 
-            {/* Profile Card */}
-            <div className={`rounded-3xl p-6 ${theme === 'dark' ? 'bg-zinc-900' : 'bg-gray-50'
-              }`}>
-              <div className="w-32 h-32 mx-auto mb-4 rounded-full overflow-hidden border-4 border-orange-500">
-                <img
-                  src="/profile_image.jpeg"
-                  alt={name}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                    e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                  }}
-                />
-                <div className={`hidden w-full h-full flex items-center justify-center text-5xl font-bold ${theme === 'dark' ? 'bg-zinc-800 text-zinc-600' : 'bg-gray-100 text-gray-400'
-                  }`}>
-                  {name.split(' ').map(n => n[0]).join('')}
-                </div>
+        {/* Home Section */}
+        <section id="home" className="pt-0 pb-4 sm:pt-0 sm:pb-6 mb-0 scroll-mt-32">
+
+          {/* Banner Image */}
+          <div className="mb-8 w-full h-48 sm:h-64 overflow-hidden rounded-3xl border border-[#1f1f1f]">
+            <img src={bannerImage} alt="Portfolio Banner" className="w-full h-full object-cover opacity-80 hover:opacity-100 transition-opacity duration-500" />
+          </div>
+
+          <div className="grid gap-10 lg:grid-cols-2 lg:gap-14 items-center">
+
+            {/* Left Column: Text Content */}
+            <div className="flex flex-col justify-center">
+              <p className="text-xs tracking-[0.28em] text-[#9a9a9a] mb-5">PORTFOLIO / 2026</p>
+
+              <h1 className="text-5xl sm:text-6xl lg:text-7xl leading-[0.95] font-light tracking-tight mb-6">
+                <span className="block text-[#eaeaea]">{name.split(' ')[0]}</span>
+                <span className="block text-[#eaeaea]/75">{name.split(' ').slice(1).join(' ')}</span>
+              </h1>
+
+              <p className="max-w-xl text-base sm:text-lg leading-relaxed text-[#9a9a9a] mb-6">
+                {bio}
+              </p>
+
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-[#9a9a9a] mb-8">
+                <span className="inline-flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]" aria-hidden />
+                  Available for work
+                </span>
+                <span className="h-4 w-px bg-[#1f1f1f]" aria-hidden />
+                <span>Based in India</span>
               </div>
 
-              <div className="text-center mb-6">
-                <h1 className="text-2xl font-bold mb-1">{name}</h1>
-                <p className="text-purple-500 font-medium">{title}</p>
-                <p className={`text-sm mt-3 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                  {bio}
-                </p>
-              </div>
-
-              {contact.resume && (
-                <a
-                  href={contact.resume}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={`block w-full py-3 rounded-xl font-medium transition-all mb-4 text-center ${theme === 'dark'
-                    ? 'bg-white text-black hover:bg-gray-100'
-                    : 'bg-black text-white hover:bg-gray-800'
-                    }`}
-                >
-                  <Download size={18} className="inline mr-2" />
-                  Download CV
+              <div className="flex flex-wrap gap-3">
+                <a href={contact.resume} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-[#1f1f1f] bg-[#0f0f0f] px-4 text-sm font-medium text-[#eaeaea] shadow-sm transition-colors hover:bg-[#141414] hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#1f1f1f] disabled:pointer-events-none disabled:opacity-50">
+                  <Briefcase size={16} />
+                  Resume
                 </a>
-              )}
 
-              <div className="flex justify-center gap-2">
                 {[
-                  { icon: Mail, link: contact.email ? `mailto:${contact.email}` : null },
-                  { icon: Github, link: contact.github },
-                  { icon: Linkedin, link: contact.linkedin },
-                  { icon: Globe, link: contact.website },
-                  { icon: Twitter, link: contact.twitter }
-                ].map((item, i) => item.link && (
-                  <a
-                    key={i}
-                    href={item.link}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={`p-2.5 rounded-lg transition-all hover:scale-110 ${theme === 'dark'
-                      ? 'bg-zinc-800 text-gray-400 hover:text-white'
-                      : 'bg-white text-gray-600 hover:text-black border border-gray-200'
-                      }`}
-                  >
-                    <item.icon size={18} />
+                  { label: "GitHub", href: contact.github, icon: FaGithub },
+                  { label: "LinkedIn", href: contact.linkedin, icon: FaLinkedin },
+                  { label: "X", href: contact.twitter, icon: FaXTwitter },
+                  { label: "Email", href: `mailto:${contact.email}`, icon: MdEmail }
+                ].filter(l => l.href).map(l => (
+                  <a key={l.label} href={l.href} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-[#1f1f1f] bg-[#0f0f0f] px-4 text-sm font-medium text-[#eaeaea] shadow-sm transition-colors hover:bg-[#141414] hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#1f1f1f] disabled:pointer-events-none disabled:opacity-50">
+                    <l.icon size={16} />
+                    {l.label}
                   </a>
                 ))}
               </div>
             </div>
 
-            {/* Skills */}
-            <div className={`rounded-3xl p-6 ${theme === 'dark' ? 'bg-zinc-900' : 'bg-gray-50'
-              }`}>
-              <h3 className="font-bold mb-4 text-sm uppercase tracking-wider opacity-60">
-                Skills
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {skills.map((skill) => (
-                  <TechBadge key={skill.name} name={skill.name} theme={theme} />
-                ))}
-              </div>
+            {/* Right Column: Chat Link (Replaced Currently Card) */}
+            <div className="flex items-center justify-center lg:justify-end w-full">
+              <Link to="/" className="inline-flex h-12 w-full sm:w-auto items-center justify-center gap-3 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-8 text-base font-medium text-emerald-500 shadow-sm transition-all hover:bg-emerald-500/20 hover:scale-105 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-500">
+                <MessageSquare size={20} />
+                Chat with my AI
+              </Link>
             </div>
 
-            {/* Work Experience */}
-            <div className={`rounded-3xl p-6 ${theme === 'dark' ? 'bg-zinc-900' : 'bg-gray-50'
-              }`}>
-              <h3 className="font-bold mb-6 text-sm uppercase tracking-wider opacity-60">
-                Work Experience
-              </h3>
-              <div className="space-y-6 relative pl-6 border-l border-orange-500">
-                {workExperience.map((exp) => (
-                  <div key={exp.id} className="relative">
-                    <div className="absolute -left-[29px] top-1 w-4 h-4 rounded-full bg-orange-500" />
-                    <div className="flex items-start gap-3">
-                      <span className="text-2xl">🏢</span>
-                      <div>
-                        <h4 className="font-semibold">{exp.company}</h4>
-                        <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                          {exp.role}
-                        </p>
-                        <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
-                          {exp.period}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
 
-          {/* MAIN CONTENT */}
-          <div className="space-y-8">
-
-            {/* Projects Header */}
-            <h2 className="text-3xl font-bold">Projects I've Made</h2>
-
-            {/* Projects Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-8">
-              {projects.map((project, index) => (
-                <motion.div
-                  key={project.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className={`rounded-2xl p-5 border transition-all hover:shadow-xl ${theme === 'dark'
-                    ? 'bg-zinc-900 border-zinc-800 hover:border-zinc-700'
-                    : 'bg-gray-50 border-gray-200 hover:border-gray-300'
-                    }`}
-                >
-                  {/* Header */}
-                  <div className="flex justify-between items-start mb-4">
-                    <div className={`p-2.5 rounded-xl ${theme === 'dark' ? 'bg-zinc-800' : 'bg-gray-100'
-                      }`}>
-                      {(() => {
-                        const Icon = getIconComponent(project.icon || "Code");
-                        return <Icon className={`w-5 h-5 ${theme === 'dark' ? 'text-zinc-100' : 'text-gray-700'
-                          }`} />;
-                      })()}
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${project.status === "Live"
-                        ? "bg-emerald-500/10 text-emerald-500"
-                        : project.status === "Building"
-                          ? "bg-blue-500/10 text-blue-500"
-                          : "bg-purple-500/10 text-purple-500"
-                        }`}>
-                        {project.status || "Building"}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Content */}
-                  <div className="mb-4">
-                    <h3 className="text-lg font-bold mb-2 flex items-center gap-2">
-                      {project.title}
-                      {project.link && (
-                        <a href={project.link} target="_blank" rel="noreferrer">
-                          <ArrowUpRight size={16} className="opacity-50 hover:opacity-100" />
-                        </a>
-                      )}
-                    </h3>
-                    <p className={`text-sm leading-relaxed ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                      }`}>
-                      {project.description}
-                    </p>
-                  </div>
-
-                  {/* Tech Stack */}
-                  <div>
-                    <p className="text-xs uppercase tracking-wider opacity-50 mb-2">
-                      🔧 TECH STACK
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {project.technologies.slice(0, 4).map((tech) => (
-                        <TechBadge key={tech} name={tech} theme={theme} />
-                      ))}
-                    </div>
-                  </div>
-                </motion.div>
+          {/* Skills */}
+          <div className="mb-2 mt-6 sm:mt-10">
+            <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-6">Technologies</h3>
+            <div className="flex flex-wrap gap-x-2 gap-y-3">
+              {skills.map((skill) => (
+                <span key={skill.name} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#111] border border-zinc-800 hover:bg-[#1a1a1a] hover:border-zinc-700 transition-all duration-200 cursor-default">
+                  {skillIcons[skill.name.toLowerCase()] ? React.createElement(skillIcons[skill.name.toLowerCase()], { size: 14, className: skillColors[skill.name.toLowerCase()]?.icon || "text-zinc-400" }) : <Code2 size={14} className="text-zinc-400" />}
+                  <span className="text-sm font-medium text-zinc-300">{skill.name}</span>
+                </span>
               ))}
             </div>
+          </div>
+        </section>
 
-            {/* GitHub Section */}
-            <div className={`rounded-3xl p-8 ${theme === 'dark' ? 'bg-zinc-900' : 'bg-gray-50'
-              }`}>
-              <h2 className="text-2xl font-bold mb-2">GitHub</h2>
-              <p className={`text-sm mb-6 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                Highlights from my open-source activity and pinned repositories.
-              </p>
-
-              {/* Contribution Graph */}
-              <div className={`rounded-2xl p-6 mb-8 overflow-hidden ${theme === 'dark' ? 'bg-black' : 'bg-white border border-gray-200'
-                }`}>
-                <div className="flex items-center gap-2 mb-4">
-                  <Github size={20} />
-                  <span className="font-semibold">{githubUsername} • Contributions</span>
-                </div>
-                <div className="flex justify-center overflow-x-auto">
-                  <GitHubCalendar
-                    username={githubUsername}
-                    colorScheme={theme === 'dark' ? 'dark' : 'light'}
-                    theme={{
-                      light: ['#ebedf0', '#fdcb82', '#fdac54', '#f98634', '#e05d44'],
-                      dark: ['#161b22', '#fdcb82', '#fdac54', '#f98634', '#e05d44'],
-                    }}
-                    fontSize={12}
-                    blockSize={12}
-                    blockMargin={4}
-                    renderBlock={(block, activity) => (
-                      // Clone the block (which is an SVG rect) and add tooltip attributes
-                      // Wrapping in a div breaks the SVG structure
-                      React.cloneElement(block as React.ReactElement, {
-                        'data-tooltip-id': 'github-tooltip',
-                        'data-tooltip-content': `${activity.count} contributions on ${activity.date}`,
-                      })
-                    )}
-                  />
-                  <Tooltip id="github-tooltip" />
-                </div>
-              </div>
-
-              {/* Pinned Repos */}
-              <div className="mb-4">
-                <span className="text-sm font-medium opacity-60">
-                  📌 Pinned Repositories
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {[
-                  { name: "finance_cal", lang: "React", desc: "Comprehensive financial calculator PWA" },
-                  { name: "tracker22", lang: "TypeScript", desc: "Offline-first habit tracking application" },
-                  { name: "portfolio_website", lang: "TypeScript", desc: "Personal portfolio website with AI integration" },
-                  { name: "droply_app", lang: "TypeScript", desc: "File sharing application" },
-                  { name: "Jobfinder-hub", lang: "JavaScript", desc: "Job search aggregator platform" }
-                ].map((repo) => {
-                  const stats = repoStats[repo.name] || { stars: 0, forks: 0 };
-                  return (
-                    <a
-                      key={repo.name}
-                      href={`https://github.com/${githubUsername}/${repo.name}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={`p-4 rounded-xl border transition-all hover:-translate-y-1 ${theme === 'dark'
-                        ? 'bg-black border-zinc-800 hover:border-zinc-700'
-                        : 'bg-white border-gray-200 hover:border-gray-300'
-                        }`}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-semibold text-blue-500 truncate pr-2">{repo.name}</span>
-                        <ArrowUpRight size={14} className="opacity-50 flex-shrink-0" />
-                      </div>
-                      <p className={`text-xs mb-3 line-clamp-2 h-8 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-600'}`}>
-                        {repo.desc}
-                      </p>
-                      <div className="flex items-center gap-3 text-xs opacity-60">
-                        <div className="flex items-center gap-1">
-                          <span className={`w-2 h-2 rounded-full ${repo.lang === 'TypeScript' ? 'bg-blue-400' :
-                            repo.lang === 'JavaScript' ? 'bg-yellow-400' : 'bg-orange-400'
-                            }`} />
-                          {repo.lang}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Star size={12} /> {stats.stars}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <GitFork size={12} /> {stats.forks}
-                        </div>
-                      </div>
-                    </a>
-                  );
-                })}
-              </div>
+        {/* Projects Section */}
+        <section id="projects" className="py-8 sm:py-10 mb-12 scroll-mt-20">
+          <div className="flex items-end justify-between gap-6 mb-8">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-normal tracking-tight text-[#eaeaea]">Projects</h2>
+              <p className="mt-2 text-sm sm:text-base text-[#9a9a9a]">Selected personal and professional work.</p>
             </div>
           </div>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            {projects.map((project) => (
+              <RefCard key={project.id} className="h-full rounded-2xl group">
+                <RefCardHeader>
+                  <div className="flex-1 min-w-0">
+                    <span className="inline-flex items-center rounded-full border border-[#1f1f1f] bg-[#0b0b0b] px-3 py-1 text-[10px] tracking-[0.2em] text-[#9a9a9a] mb-4 uppercase">
+                      Project
+                    </span>
+                    <RefCardTitle className="text-lg sm:text-xl font-normal truncate pr-4">{project.title}</RefCardTitle>
+                  </div>
+
+                  <div data-slot="card-action" className="flex items-start gap-3">
+                    {project.github && (
+                      <a href={project.github} target="_blank" rel="noreferrer" className="text-[#9a9a9a] hover:text-white transition-colors">
+                        <FaGithub size={20} />
+                      </a>
+                    )}
+                    {(project.link || project.demoUrl) && (
+                      <a href={project.link || project.demoUrl} target="_blank" rel="noreferrer" className="text-[#9a9a9a] hover:text-white transition-colors">
+                        <ExternalLink size={20} />
+                      </a>
+                    )}
+                  </div>
+                </RefCardHeader>
+                <RefCardContent>
+                  <p className="text-sm leading-relaxed text-[#9a9a9a] line-clamp-3 group-hover:text-[#b0b0b0] transition-colors">{project.description}</p>
+                </RefCardContent>
+                <RefCardFooter>
+                  <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+                    {project.technologies.slice(0, 5).map((t) => (
+                      <span key={t} className="text-[#9a9a9a] underline underline-offset-4 decoration-[#1f1f1f] hover:decoration-[#333] transition-all">
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                </RefCardFooter>
+              </RefCard>
+            ))}
+          </div>
+        </section>
+
+        {/* Experience Section - HIDDEN */}
+        {/* 
+          <section id="experience" ... >
+             ...
+          </section> 
+          */}
+
+        {/* Contact Section */}
+        <ConnectFooter contact={contact} />
+
+        {/* Final Footer Quote */}
+        <div className="border-t border-[#1f1f1f] py-10 mt-12 bg-[#0b0b0b] flex justify-center">
+          <p className="text-sm text-[#9a9a9a] italic">"It is not death that a man should fear, but he should fear never beginning to live."</p>
         </div>
 
-        {/* Footer */}
-        <footer className={`border-t mt-12 py-8 text-center ${theme === 'dark' ? 'border-zinc-800' : 'border-gray-200'
-          }`}>
-          <p className="text-sm opacity-60">
-            © {new Date().getFullYear()} {name}
-          </p>
-        </footer>
       </div>
     </div>
   );
 };
-
 export default Portfolio;

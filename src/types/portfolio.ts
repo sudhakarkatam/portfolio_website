@@ -91,6 +91,16 @@ export interface PersonalTraits {
   hobbies: string[];
 }
 
+export interface Contact {
+  email: string;
+  github?: string;
+  linkedin?: string;
+  twitter?: string;
+  telegram?: string;
+  discord?: string;
+  resume?: string;
+}
+
 export interface Certification {
   id: string;
   name: string;
@@ -108,13 +118,7 @@ export interface PortfolioData {
   projects: ProjectDetail[];
   experience: Experience[];
   certifications?: Certification[];
-  contact: {
-    email: string;
-    github?: string;
-    linkedin?: string;
-    resume?: string;
-    twitter?: string;
-  };
+  contact: Contact;
   availability?: AvailabilityStatus;
   personalTraits?: PersonalTraits;
 }

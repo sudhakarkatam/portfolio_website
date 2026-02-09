@@ -8,113 +8,143 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 220 15% 6%;
-    --foreground: 0 0% 98%;
+    /* 
+      Senior Engineer Theme - "Focus"
+      Inspired by Linear, Vercel, and GitHub Dark Dimmed.
+      Goal: Calm, deeply contrast but not harsh, semantic clarity.
+    */
 
-    --card: 220 15% 10%;
-    --card-foreground: 0 0% 98%;
+    /* Base - Modern Deep Dark */
+    --background: 224 14% 6%;
+    /* #0D0E11 - Almost black, hint of blue */
+    --foreground: 210 20% 98%;
+    /* Soft White */
 
-    --popover: 220 15% 8%;
-    --popover-foreground: 0 0% 98%;
+    /* Surfaces - Subtle separation */
+    --card: 224 10% 8%;
+    --card-foreground: 210 20% 98%;
 
-    --primary: 217 91% 60%;
-    --primary-foreground: 0 0% 100%;
+    --popover: 224 10% 8%;
+    --popover-foreground: 210 20% 98%;
 
-    --secondary: 220 15% 15%;
-    --secondary-foreground: 0 0% 98%;
+    /* Primary - Confident Indigo/Blurple */
+    --primary: 246 80% 60%;
+    /* #6366F1 - Indigo 500 equivalent, vibrant but not neon */
+    --primary-foreground: 210 20% 98%;
 
-    --muted: 220 15% 20%;
-    --muted-foreground: 220 10% 60%;
+    /* Secondary - Muted functionality */
+    --secondary: 224 10% 12%;
+    --secondary-foreground: 210 20% 98%;
 
-    --accent: 217 91% 60%;
-    --accent-foreground: 0 0% 100%;
+    /* Muted - De-emphasized text/elements */
+    --muted: 224 10% 12%;
+    --muted-foreground: 220 14% 62%;
+    /* Solid gray for readability */
 
+    /* Accents - Interactive states */
+    --accent: 224 14% 16%;
+    --accent-foreground: 210 20% 98%;
+
+    /* Destructive - Controlled alert */
     --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive-foreground: 210 20% 98%;
 
-    --border: 220 15% 20%;
-    --input: 220 15% 15%;
-    --ring: 217 91% 60%;
+    /* Borders - Subtle structure */
+    --border: 224 10% 18%;
+    /* Low contrast border */
+    --input: 224 10% 18%;
+    --ring: 246 80% 60%;
+    /* Focus color matches primary */
 
-    --radius: 0.75rem;
+    --radius: 0.5rem;
+    /* Clean, modern radius (8px) */
 
-    --chat-user: 217 91% 60%;
-    --chat-assistant: 220 15% 15%;
-    
-    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%) 0%, hsl(237 91% 70%) 100%);
-    --gradient-subtle: linear-gradient(180deg, hsl(220 15% 8%) 0%, hsl(220 15% 6%) 100%);
-    
-    --shadow-glow: 0 0 40px hsl(217 91% 60% / 0.2);
-    --shadow-card: 0 4px 20px hsl(220 15% 4% / 0.5);
-    
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Chat Elements */
+    --chat-user: 224 14% 16%;
+    --chat-assistant: 224 14% 6%;
 
-    --sidebar-background: 220 15% 8%;
-    --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 217 91% 60%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 15% 15%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 220 15% 20%;
-    --sidebar-ring: 217 91% 60%;
+    /* Visual Effects */
+    --gradient-primary: linear-gradient(135deg, hsl(246 80% 60%) 0%, hsl(260 80% 65%) 100%);
+    --gradient-subtle: linear-gradient(180deg, hsl(224 14% 8%) 0%, hsl(224 14% 6%) 100%);
+
+    --shadow-glow: 0 0 0 1px rgba(99, 102, 241, 0.1), 0 8px 40px rgba(0, 0, 0, 0.4);
+    --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.15);
+
+    --transition-smooth: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    /* "Snap" feel */
+
+    /* Sidebar specifics */
+    --sidebar-background: 224 14% 5%;
+    --sidebar-foreground: 210 20% 98%;
+    --sidebar-primary: 246 80% 60%;
+    --sidebar-primary-foreground: 210 20% 98%;
+    --sidebar-accent: 224 14% 12%;
+    --sidebar-accent-foreground: 210 20% 98%;
+    --sidebar-border: 224 10% 12%;
+    --sidebar-ring: 246 80% 60%;
   }
 
   .light {
-    --background: 0 0% 98%;
-    --foreground: 220 15% 6%;
+    /* Senior Light Theme - "Clarity"
+       Clean, high-contrast, paper-like.
+    */
+    --background: 0 0% 100%;
+    --foreground: 224 14% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 15% 6%;
+    --card-foreground: 224 14% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 15% 6%;
+    --popover-foreground: 224 14% 10%;
 
-    --primary: 217 91% 60%;
+    --primary: 224 14% 10%;
+    /* Almost black/Navy for primary actions */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 220 15% 6%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 224 14% 10%;
 
-    --muted: 0 0% 96%;
-    --muted-foreground: 220 10% 40%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 14% 45%;
 
-    --accent: 217 91% 60%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 220 14% 94%;
+    --accent-foreground: 224 14% 10%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 90%;
-    --input: 0 0% 96%;
-    --ring: 217 91% 60%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 224 14% 10%;
+    /* Focus color is dark */
 
-    --chat-user: 217 91% 60%;
-    --chat-assistant: 0 0% 96%;
+    --chat-user: 220 14% 96%;
+    --chat-assistant: 0 0% 100%;
 
-    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%) 0%, hsl(237 91% 70%) 100%);
-    --gradient-subtle: linear-gradient(180deg, hsl(0 0% 98%) 0%, hsl(0 0% 95%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(224 14% 10%) 0%, hsl(224 14% 25%) 100%);
+    --gradient-subtle: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(0 0% 98%) 100%);
 
-    --shadow-glow: 0 0 40px hsl(217 91% 60% / 0.1);
-    --shadow-card: 0 4px 20px hsl(0 0% 0% / 0.1);
+    --shadow-glow: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 8px 30px rgba(0, 0, 0, 0.05);
+    --shadow-card: 0 2px 4px rgba(0, 0, 0, 0.02), 0 1px 2px rgba(0, 0, 0, 0.03);
 
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 220 15% 6%;
-    --sidebar-primary: 217 91% 60%;
+    --sidebar-background: 220 14% 98%;
+    --sidebar-foreground: 224 14% 10%;
+    --sidebar-primary: 224 14% 10%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 96%;
-    --sidebar-accent-foreground: 220 15% 6%;
-    --sidebar-border: 0 0% 90%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-accent: 220 14% 94%;
+    --sidebar-accent-foreground: 224 14% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 224 14% 10%;
   }
 }
 
 @layer utilities {
   .chat-bubble-user {
-    @apply bg-gradient-to-br from-primary to-primary/80 text-primary-foreground rounded-2xl rounded-br-md;
+    @apply bg-primary text-primary-foreground rounded-2xl rounded-br-md shadow-md hover:shadow-lg transition-shadow duration-200;
   }
 
   .chat-bubble-assistant {
-    @apply bg-gradient-to-br from-secondary to-secondary/80 text-secondary-foreground rounded-2xl rounded-bl-md border border-border/50;
+    @apply bg-card text-card-foreground rounded-2xl rounded-bl-md border border-border/50 shadow-sm;
   }
 
   .gradient-primary {
@@ -131,10 +161,11 @@ All colors MUST be HSL.
 
   @keyframes pulse-glow {
     from {
-      box-shadow: 0 0 20px hsl(217 91% 60% / 0.1);
+      box-shadow: 0 0 20px hsl(var(--primary) / 0.1);
     }
+
     to {
-      box-shadow: 0 0 40px hsl(217 91% 60% / 0.3);
+      box-shadow: 0 0 40px hsl(var(--primary) / 0.3);
     }
   }
 }
@@ -145,12 +176,34 @@ All colors MUST be HSL.
   }
 
   html {
-    font-size: 90%; /* Reduce overall text by 10% */
+    font-size: 90%;
+    /* Reduce overall text by 10% */
   }
 
   body {
     @apply bg-background text-foreground;
-    font-size: 1.08rem; /* base * 0.9 */
+    font-size: 1.08rem;
+    /* base * 0.9 */
+    /* Premium Smooth Page Transition */
+    transition: background-color 0.5s ease, color 0.5s ease;
+  }
+
+  /* Smooth transition for commonly changed properties on other elements */
+  div,
+  button,
+  input,
+  header,
+  section,
+  span,
+  p,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  a {
+    transition: background-color 0.5s ease, border-color 0.5s ease, color 0.5s ease, box-shadow 0.5s ease;
   }
 
   /* Mobile touch enhancements */
@@ -160,13 +213,16 @@ All colors MUST be HSL.
       -webkit-touch-callout: none;
     }
 
-    button, .button {
+    button,
+    .button {
       min-height: 44px;
       min-width: 44px;
     }
 
-    input, textarea {
-      font-size: 16px; /* Prevents zoom on iOS */
+    input,
+    textarea {
+      font-size: 16px;
+      /* Prevents zoom on iOS */
     }
   }
 

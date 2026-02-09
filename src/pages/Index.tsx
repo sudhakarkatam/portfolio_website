@@ -468,13 +468,13 @@ const Index = () => {
       {currentView === "home" && !isChatExpanded && (
         <div className="fixed top-3 right-3 md:top-5 md:right-5 z-50 flex gap-2">
           <Button
-            variant="outline"
-            size="icon"
+            variant="ghost"
             onClick={() => window.open("/portfolio", "_self")}
-            className="w-10 h-10"
-            title="View Portfolio"
+            className="gap-2 text-muted-foreground hover:text-foreground transition-colors"
           >
             <Eye className="h-4 w-4" />
+            <span className="hidden md:inline">Classic View</span>
+            <span className="md:hidden">Classic View</span>
           </Button>
           <ThemeToggle />
         </div>
