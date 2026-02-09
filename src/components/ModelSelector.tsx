@@ -98,25 +98,23 @@ export const ModelSelector = ({ selectedModel, onModelChange, className }: Model
     <Select value={selectedModel} onValueChange={onModelChange}>
       <SelectTrigger
         className={cn(
-          "h-8 w-auto min-w-[140px] border-border/50 bg-background/50 hover:bg-background/80 text-xs md:text-sm",
-          isAIMode && "border-accent/30 bg-accent/10",
+          "h-8 w-auto min-w-[140px] border-zinc-200 dark:border-zinc-800 bg-white/90 dark:bg-zinc-900/90 hover:bg-white dark:hover:bg-zinc-800 text-xs md:text-sm shadow-sm transition-colors",
+          isAIMode && "border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
           className
         )}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 max-w-full overflow-hidden">
           {isAIMode ? (
-            <Bot className="h-3.5 w-3.5 md:h-4 md:w-4 text-accent" />
+            <Bot className="h-3.5 w-3.5 md:h-4 md:w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
           ) : (
-            <Sparkles className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground" />
+            <Sparkles className="h-3.5 w-3.5 md:h-4 md:w-4 text-zinc-500 dark:text-zinc-400 shrink-0" />
           )}
-          <SelectValue>
-            <span className={cn(
-              "font-medium",
-              isAIMode ? "text-accent" : "text-muted-foreground"
-            )}>
-              {selectedOption.name}
-            </span>
-          </SelectValue>
+          <span className={cn(
+            "font-medium truncate block",
+            isAIMode ? "text-emerald-700 dark:text-emerald-400" : "text-zinc-700 dark:text-zinc-200"
+          )}>
+            {selectedOption.name}
+          </span>
         </div>
       </SelectTrigger>
       <SelectContent>
