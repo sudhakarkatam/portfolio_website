@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import Portfolio from "./pages/Portfolio";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
+import CalTool from "./pages/CalTool";
 import AdminLayout from "./layouts/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
 import GuestbookManager from "./pages/admin/GuestbookManager";
@@ -39,6 +40,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/portfolio" element={<Portfolio />} />
+          <Route path="/caltool" element={<CalTool />} />
 
           {/* Admin Routes */}
           <Route path="/login" element={<Login />} />
