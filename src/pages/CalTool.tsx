@@ -123,6 +123,11 @@ const CalTool: React.FC = () => {
   // Draggable category index state for local visual feedback
   const [draggedCatIndex, setDraggedCatIndex] = useState<number | null>(null);
 
+  // Dedicated Notepad State
+  const [isNotepadActive, setIsNotepadActive] = useState<boolean>(false);
+  const [noteContent, setNoteContent] = useState<string>("");
+  const [dbNoteContent, setDbNoteContent] = useState<string>("");
+
   // Load tracker state directly from database on mount (no admin login required)
   useEffect(() => {
     loadDataFromSupabase();
@@ -159,6 +164,25 @@ const CalTool: React.FC = () => {
         console.error("Supabase load days error:", dayError);
         setDbStatus("error");
         return;
+      }
+
+      // 3. Fetch notepad content
+      const { data: noteData, error: noteError } = await supabase
+        .from("tracker_notes")
+        .select("*")
+        .eq("id", "00000000-0000-0000-0000-000000000000")
+        .maybeSingle();
+
+      if (noteError) {
+        console.error("Supabase load notes error:", noteError);
+      } else {
+        if (noteData) {
+          setNoteContent(noteData.content || "");
+          setDbNoteContent(noteData.content || "");
+        } else {
+          // If no note found, insert default empty note
+          await supabase.from("tracker_notes").insert({ id: "00000000-0000-0000-0000-000000000000", content: "" });
+        }
       }
 
       console.log("Supabase Load: tracker_categories fetched =", catData);
@@ -513,6 +537,31 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
     }
   };
 
+  // Save notepad content to Supabase
+  const saveNoteToDb = async (content: string) => {
+    if (content === dbNoteContent) return; // Skip if identical
+
+    setDbStatus("syncing");
+    console.log("Supabase Sync: Saving notepad content...");
+
+    const { error } = await supabase
+      .from("tracker_notes")
+      .upsert({
+        id: "00000000-0000-0000-0000-000000000000",
+        content,
+        updated_at: new Date().toISOString()
+      });
+
+    if (error) {
+      console.error("Error saving notepad to Supabase:", error);
+      setDbStatus("error");
+    } else {
+      console.log("Supabase Sync success: Notepad saved successfully.");
+      setDbStatus("synced");
+      setDbNoteContent(content);
+    }
+  };
+
   // Toggle display-only target values without updating permanent DB day state
   const handleGenerateTargets = () => {
     setShowCalculatedTargets(true);
@@ -572,6 +621,14 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
           setDbStatus("error");
           return;
         }
+
+        // Clear Notepad
+        setNoteContent("");
+        setDbNoteContent("");
+        await supabase
+          .from("tracker_notes")
+          .update({ content: "" })
+          .eq("id", "00000000-0000-0000-0000-000000000000");
 
         await initializeDefaultDbData();
         setShowCalculatedTargets(false);
@@ -825,7 +882,7 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
             </span>
             <div className="flex flex-col gap-1.5">
               {categories.map((cat, idx) => {
-                const isActive = cat.id === activeCategoryId;
+                const isActive = cat.id === activeCategoryId && !isNotepadActive;
                 const isEditing = isEditingTabName === cat.id;
 
                 const isManageable = cat.id === "o1" || cat.id === "o2" || cat.id.startsWith("custom_");
@@ -863,6 +920,7 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
                           tabIndex={0}
                           onClick={() => {
                             setActiveCategoryId(cat.id);
+                            setIsNotepadActive(false);
                             setShowCalculatedTargets(false); // Reset targets view on tab switch
                             setEditingNoteIndex(null);
                             setEditingPriceIndex(null);
@@ -870,6 +928,7 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
                           onKeyDown={(e) => {
                             if (e.key === "Enter" || e.key === " ") {
                               setActiveCategoryId(cat.id);
+                              setIsNotepadActive(false);
                               setShowCalculatedTargets(false);
                               setEditingNoteIndex(null);
                               setEditingPriceIndex(null);
@@ -928,226 +987,294 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
                 <Plus className="w-3.5 h-3.5" />
                 Add Tracker
               </button>
+
+              {/* Divider and Notepad Tab */}
+              <div className="border-t border-border/20 my-2 pt-2" />
+              <button
+                onClick={() => {
+                  setIsNotepadActive(true);
+                  setShowCalculatedTargets(false);
+                  setEditingNoteIndex(null);
+                  setEditingPriceIndex(null);
+                }}
+                className={`text-xs font-semibold px-3 py-2.5 rounded-lg border w-full text-left flex items-center gap-2 transition-all ${
+                  isNotepadActive
+                    ? "bg-primary text-primary-foreground border-transparent shadow-sm"
+                    : "bg-card/30 text-muted-foreground border-border/30 hover:bg-card/50 hover:text-foreground"
+                }`}
+              >
+                <span>📓</span>
+                <span>Notepad / Scratch</span>
+              </button>
             </div>
           </aside>
 
           {/* Main Content Area */}
           <main className="flex-grow flex flex-col gap-6 w-full">
             
-            {/* Target Calculator Panel */}
-            <section className="bg-card/30 border border-border/40 backdrop-blur-md rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm w-full">
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                <div className="flex items-center gap-1.5 text-primary font-bold text-xs">
-                  <Calculator className="w-4 h-4" />
-                  <span>Target Calculator</span>
+            {isNotepadActive ? (
+              /* Dedicated Notepad Panel */
+              <section className="bg-card/30 border border-border/40 backdrop-blur-md rounded-xl p-6 shadow-sm w-full flex flex-col gap-4 min-h-[500px]">
+                <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">📓</span>
+                    <div>
+                      <h2 className="text-sm font-bold text-foreground">Global Notepad / Scratch</h2>
+                      <p className="text-[10px] text-muted-foreground">Auto-saves to your database on typing pause or text area blur</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      triggerConfirm(
+                        "Clear Notepad Content",
+                        "Are you sure you want to permanently clear all text in your notepad? This will delete the content from Supabase.",
+                        () => {
+                          setNoteContent("");
+                          saveNoteToDb("");
+                        }
+                      );
+                    }}
+                    className="flex items-center gap-1.5 text-xs text-destructive border border-destructive/20 px-3 py-1.5 rounded-lg hover:bg-destructive/10 transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Clear Notes
+                  </button>
                 </div>
-                
-                {/* Input Principal */}
-                <div className="flex items-center bg-background/50 border border-border/50 rounded-lg px-2.5 py-1 focus-within:border-primary/50 transition-colors">
-                  <span className="text-[11px] text-muted-foreground mr-1.5">Start Principal (₹)</span>
-                  <input
-                    type="number"
-                    value={activeCategory.principal}
-                    onChange={(e) => handleUpdateCalculatorConfig("principal", e.target.value)}
-                    onBlur={() => saveCalculatorConfigToDb(activeCategoryId, activeCategory.principal, activeCategory.rate)}
-                    className="bg-transparent border-none text-xs outline-none w-16 text-foreground font-semibold"
-                    placeholder="100"
-                  />
+                <textarea
+                  value={noteContent}
+                  onChange={(e) => {
+                    setNoteContent(e.target.value);
+                    // Fast auto-save triggers on blur or change with state tracking
+                  }}
+                  onBlur={() => saveNoteToDb(noteContent)}
+                  placeholder="Type your notes, reminders, math calculations, or daily thoughts here... Everything you write here will automatically save to your Supabase database."
+                  className="w-full flex-grow min-h-[380px] bg-white border border-border/80 rounded-lg p-4 text-xs font-mono leading-relaxed outline-none focus:border-primary/60 text-black resize-y shadow-inner transition-colors placeholder:text-zinc-400"
+                />
+                <div className="flex justify-between items-center text-[10px] text-muted-foreground">
+                  <span>Characters: {noteContent.length} | Lines: {noteContent.split('\n').length}</span>
+                  {dbStatus === "synced" && <span className="text-emerald-400 font-semibold">● Saved to Cloud</span>}
+                  {dbStatus === "syncing" && <span className="text-amber-400 animate-pulse font-semibold">● Saving Changes...</span>}
+                  {dbStatus === "error" && <span className="text-destructive font-semibold">● Save Failed</span>}
                 </div>
+              </section>
+            ) : (
+              <>
+                {/* Target Calculator Panel */}
+                <section className="bg-card/30 border border-border/40 backdrop-blur-md rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm w-full">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    <div className="flex items-center gap-1.5 text-primary font-bold text-xs">
+                      <Calculator className="w-4 h-4" />
+                      <span>Target Calculator</span>
+                    </div>
+                    
+                    {/* Input Principal */}
+                    <div className="flex items-center bg-background/50 border border-border/50 rounded-lg px-2.5 py-1 focus-within:border-primary/50 transition-colors">
+                      <span className="text-[11px] text-muted-foreground mr-1.5">Start Principal (₹)</span>
+                      <input
+                        type="number"
+                        value={activeCategory.principal}
+                        onChange={(e) => handleUpdateCalculatorConfig("principal", e.target.value)}
+                        onBlur={() => saveCalculatorConfigToDb(activeCategoryId, activeCategory.principal, activeCategory.rate)}
+                        className="bg-transparent border-none text-xs outline-none w-16 text-foreground font-semibold"
+                        placeholder="100"
+                      />
+                    </div>
 
-                {/* Input Rate */}
-                <div className="flex items-center bg-background/50 border border-border/50 rounded-lg px-2.5 py-1 focus-within:border-primary/50 transition-colors">
-                  <span className="text-[11px] text-muted-foreground mr-1.5">Compounding Rate (%)</span>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={activeCategory.rate}
-                    onChange={(e) => handleUpdateCalculatorConfig("rate", e.target.value)}
-                    onBlur={() => saveCalculatorConfigToDb(activeCategoryId, activeCategory.principal, activeCategory.rate)}
-                    className="bg-transparent border-none text-xs outline-none w-12 text-foreground font-semibold"
-                    placeholder="25"
-                  />
-                </div>
-              </div>
+                    {/* Input Rate */}
+                    <div className="flex items-center bg-background/50 border border-border/50 rounded-lg px-2.5 py-1 focus-within:border-primary/50 transition-colors">
+                      <span className="text-[11px] text-muted-foreground mr-1.5">Compounding Rate (%)</span>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={activeCategory.rate}
+                        onChange={(e) => handleUpdateCalculatorConfig("rate", e.target.value)}
+                        onBlur={() => saveCalculatorConfigToDb(activeCategoryId, activeCategory.principal, activeCategory.rate)}
+                        className="bg-transparent border-none text-xs outline-none w-12 text-foreground font-semibold"
+                        placeholder="25"
+                      />
+                    </div>
+                  </div>
 
-              <div className="flex items-center gap-2 self-end md:self-auto">
-                <button
-                  onClick={handleGenerateTargets}
-                  className="flex items-center gap-1 text-xs font-semibold px-3.5 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/95 shadow-sm transition-all duration-200"
-                  title="Generate compound target prices"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  Calculate & Set Targets
-                </button>
-                <button
-                  onClick={handleResetCurrentCategory}
-                  className="flex items-center gap-1 text-xs font-semibold px-3 py-2 rounded-lg border border-border bg-card/60 hover:bg-card hover:border-border/80 transition-all text-muted-foreground hover:text-foreground"
-                  title="Reset current tracker items"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  Reset Tab
-                </button>
-              </div>
-            </section>
-
-            {/* Small grid of 30 blocks */}
-            <section className="w-full">
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-                {activeCategory.days.map((day, idx) => {
-                  const dayIndex = idx + 1;
-                  const isChecked = day.checked;
-                  const cardClass = isChecked ? theme.cardChecked : theme.cardUnchecked;
-
-                  const isEditingNote = editingNoteIndex === idx;
-                  const isEditingPrice = editingPriceIndex === idx;
-
-                  // Calculate target price on the fly (for display only, not stored in DB)
-                  const principalNum = parseFloat(activeCategory.principal) || 0;
-                  const rateNum = parseFloat(activeCategory.rate) || 0;
-                  const targetVal = principalNum * Math.pow(1 + rateNum / 100, dayIndex);
-                  const targetValStr = targetVal.toFixed(2);
-
-                  return (
-                    <div
-                      key={idx}
-                      className={`relative flex flex-col justify-between p-3 rounded-xl border transition-all duration-200 aspect-[1/1.05] min-h-[110px] group ${cardClass}`}
+                  <div className="flex items-center gap-2 self-end md:self-auto">
+                    <button
+                      onClick={handleGenerateTargets}
+                      className="flex items-center gap-1 text-xs font-semibold px-3.5 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/95 shadow-sm transition-all duration-200"
+                      title="Generate compound target prices"
                     >
-                      {/* Small uncheck trigger if emoji shows up */}
-                      {isChecked && (
-                        <button
-                          onClick={() => handleToggleDay(idx)}
-                          className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-destructive/80 text-white text-[9px] flex items-center justify-center font-bold opacity-0 group-hover:opacity-100 hover:bg-destructive transition-all z-10"
-                          title="Uncheck Day"
+                      <Sparkles className="w-3.5 h-3.5" />
+                      Calculate & Set Targets
+                    </button>
+                    <button
+                      onClick={handleResetCurrentCategory}
+                      className="flex items-center gap-1 text-xs font-semibold px-3 py-2 rounded-lg border border-border bg-card/60 hover:bg-card hover:border-border/80 transition-all text-muted-foreground hover:text-foreground"
+                      title="Reset current tracker items"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      Reset Tab
+                    </button>
+                  </div>
+                </section>
+
+                {/* Small grid of 30 blocks */}
+                <section className="w-full">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                    {activeCategory.days.map((day, idx) => {
+                      const dayIndex = idx + 1;
+                      const isChecked = day.checked;
+                      const cardClass = isChecked ? theme.cardChecked : theme.cardUnchecked;
+
+                      const isEditingNote = editingNoteIndex === idx;
+                      const isEditingPrice = editingPriceIndex === idx;
+
+                      // Calculate target price on the fly (for display only, not stored in DB)
+                      const principalNum = parseFloat(activeCategory.principal) || 0;
+                      const rateNum = parseFloat(activeCategory.rate) || 0;
+                      const targetVal = principalNum * Math.pow(1 + rateNum / 100, dayIndex);
+                      const targetValStr = targetVal.toFixed(2);
+
+                      return (
+                        <div
+                          key={idx}
+                          className={`relative flex flex-col justify-between p-3 rounded-xl border transition-all duration-200 aspect-[1/1.05] min-h-[110px] group ${cardClass}`}
                         >
-                          ×
-                        </button>
-                      )}
-
-                      {/* Top line: Day label and note element */}
-                      <div className="flex items-center justify-between text-[11px] text-muted-foreground w-full">
-                        <span className="font-semibold">Day {dayIndex}</span>
-
-                        {/* Above Checkbox: Note content or toggle */}
-                        <div className="flex justify-end">
-                          {isEditingNote ? (
-                            <input
-                              type="text"
-                              value={tempNoteText}
-                              onChange={(e) => setTempNoteText(e.target.value)}
-                              onBlur={() => saveNoteEdit(idx)}
-                              onKeyDown={(e) => {
-                                  if (e.key === "Enter") saveNoteEdit(idx);
-                                  if (e.key === "Escape") setEditingNoteIndex(null);
-                                }}
-                              className="bg-background/90 text-[10px] border border-border rounded px-1 py-0.5 outline-none w-16"
-                              autoFocus
-                              placeholder="Note..."
-                            />
-                          ) : day.note ? (
+                          {/* Small uncheck trigger if emoji shows up */}
+                          {isChecked && (
                             <button
-                              onClick={() => triggerNoteEdit(idx, day.note)}
-                              className="text-[10px] text-foreground bg-primary/10 border border-primary/20 px-1 py-0.5 rounded truncate max-w-[65px] font-medium"
-                              title={day.note}
+                              onClick={() => handleToggleDay(idx)}
+                              className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-destructive/80 text-white text-[9px] flex items-center justify-center font-bold opacity-0 group-hover:opacity-100 hover:bg-destructive transition-all z-10"
+                              title="Uncheck Day"
                             >
-                              {day.note}
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => triggerNoteEdit(idx, "")}
-                              className="text-[9px] hover:text-foreground text-muted-foreground/50 flex items-center gap-0.5"
-                            >
-                              <Plus className="w-2.5 h-2.5" /> Note
+                              ×
                             </button>
                           )}
-                        </div>
-                      </div>
 
-                      {/* Middle Checkbox (Centered with Pop Animation) */}
-                      <div className="flex items-center justify-center my-1.5 relative">
-                        {isChecked ? (
-                          <div className="relative animate-check-pop">
-                            <button
-                              onClick={() => setShowEmojiPickerForDay(showEmojiPickerForDay === idx ? null : idx)}
-                              className="text-2xl hover:scale-110 active:scale-95 transition-transform p-1 select-none"
-                              title="Change Emoji"
-                            >
-                              {day.emoji}
-                            </button>
+                          {/* Top line: Day label and note element */}
+                          <div className="flex items-center justify-between text-[11px] text-muted-foreground w-full">
+                            <span className="font-semibold">Day {dayIndex}</span>
 
-                            {/* Inline Emoji Selector Popup with Smooth Fade/Scale */}
-                            {showEmojiPickerForDay === idx && (
-                              <div className="absolute left-1/2 -translate-x-1/2 bottom-8 z-30 bg-card border border-border p-1.5 rounded-lg shadow-xl grid grid-cols-3 gap-1.5 w-24 animate-fade-scale-in">
-                                {POPULAR_EMOJIS.map((emoji) => (
-                                  <button
-                                    key={emoji}
-                                    onClick={() => {
-                                      handleUpdateDayText(idx, "emoji", emoji);
-                                      setShowEmojiPickerForDay(null);
+                            {/* Above Checkbox: Note content or toggle */}
+                            <div className="flex justify-end">
+                              {isEditingNote ? (
+                                <input
+                                  type="text"
+                                  value={tempNoteText}
+                                  onChange={(e) => setTempNoteText(e.target.value)}
+                                  onBlur={() => saveNoteEdit(idx)}
+                                  onKeyDown={(e) => {
+                                      if (e.key === "Enter") saveNoteEdit(idx);
+                                      if (e.key === "Escape") setEditingNoteIndex(null);
                                     }}
-                                    className="text-sm p-1 hover:bg-accent rounded active:scale-95 transition-all text-center select-none"
-                                  >
-                                    {emoji}
-                                  </button>
-                                ))}
+                                  className="bg-background/90 text-[10px] border border-border rounded px-1 py-0.5 outline-none w-16"
+                                  autoFocus
+                                  placeholder="Note..."
+                                />
+                              ) : day.note ? (
+                                <button
+                                  onClick={() => triggerNoteEdit(idx, day.note)}
+                                  className="text-[10px] text-foreground bg-primary/10 border border-primary/20 px-1 py-0.5 rounded truncate max-w-[65px] font-medium"
+                                  title={day.note}
+                                >
+                                  {day.note}
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => triggerNoteEdit(idx, "")}
+                                  className="text-[9px] hover:text-foreground text-muted-foreground/50 flex items-center gap-0.5"
+                                >
+                                  <Plus className="w-2.5 h-2.5" /> Note
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Middle Checkbox (Centered with Pop Animation) */}
+                          <div className="flex items-center justify-center my-1.5 relative">
+                            {isChecked ? (
+                              <div className="relative animate-check-pop">
+                                <button
+                                  onClick={() => setShowEmojiPickerForDay(showEmojiPickerForDay === idx ? null : idx)}
+                                  className="text-2xl hover:scale-110 active:scale-95 transition-transform p-1 select-none"
+                                  title="Change Emoji"
+                                >
+                                  {day.emoji}
+                                </button>
+
+                                {/* Inline Emoji Selector Popup with Smooth Fade/Scale */}
+                                {showEmojiPickerForDay === idx && (
+                                  <div className="absolute left-1/2 -translate-x-1/2 bottom-8 z-30 bg-card border border-border p-1.5 rounded-lg shadow-xl grid grid-cols-3 gap-1.5 w-24 animate-fade-scale-in">
+                                    {POPULAR_EMOJIS.map((emoji) => (
+                                      <button
+                                        key={emoji}
+                                        onClick={() => {
+                                          handleUpdateDayText(idx, "emoji", emoji);
+                                          setShowEmojiPickerForDay(null);
+                                        }}
+                                        className="text-sm p-1 hover:bg-accent rounded active:scale-95 transition-all text-center select-none"
+                                      >
+                                        {emoji}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
+                            ) : (
+                              <button
+                                onClick={() => handleToggleDay(idx)}
+                                className="w-7 h-7 rounded-lg border border-border/80 text-transparent hover:border-primary/50 hover:bg-primary/5 bg-background/20 transition-all flex items-center justify-center"
+                              >
+                                <Check className="w-4 h-4 text-transparent hover:text-muted-foreground/30 stroke-[3]" />
+                              </button>
                             )}
                           </div>
-                        ) : (
-                          <button
-                            onClick={() => handleToggleDay(idx)}
-                            className="w-7 h-7 rounded-lg border border-border/80 text-transparent hover:border-primary/50 hover:bg-primary/5 bg-background/20 transition-all flex items-center justify-center"
-                          >
-                            <Check className="w-4 h-4 text-transparent hover:text-muted-foreground/30 stroke-[3]" />
-                          </button>
-                        )}
-                      </div>
 
-                      {/* Below Checkbox: Price content or toggle */}
-                      <div className="flex items-center justify-center w-full">
-                        {isEditingPrice ? (
-                          <input
-                            type="text"
-                            value={tempPriceText}
-                            onChange={(e) => setTempPriceText(e.target.value)}
-                            onBlur={() => savePriceEdit(idx)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") savePriceEdit(idx);
-                              if (e.key === "Escape") setEditingPriceIndex(null);
-                            }}
-                            className="bg-background/90 text-[10px] text-center border border-border rounded px-1 py-0.5 outline-none w-16"
-                            autoFocus
-                            placeholder="Price..."
-                          />
-                        ) : day.price ? (
-                          <button
-                            onClick={() => triggerPriceEdit(idx, day.price)}
-                            className="text-[10px] font-black text-foreground hover:text-primary transition-colors"
-                          >
-                            ₹{day.price}
-                          </button>
-                        ) : showCalculatedTargets && principalNum > 0 && rateNum > 0 ? (
-                          <button
-                            onClick={() => triggerPriceEdit(idx, targetValStr)}
-                            className="text-[10px] font-medium text-muted-foreground/60 hover:text-primary transition-colors flex items-center gap-0.5 italic"
-                            title="Calculated Target (not stored in DB)"
-                          >
-                            <span>₹{targetValStr}</span>
-                            <span className="text-[7px] bg-primary/10 text-primary px-0.5 rounded font-black not-italic">T</span>
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => triggerPriceEdit(idx, "")}
-                            className="text-[9px] hover:text-foreground text-muted-foreground/50 flex items-center gap-0.5"
-                          >
-                            <Plus className="w-2.5 h-2.5" /> Price
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
+                          {/* Below Checkbox: Price content or toggle */}
+                          <div className="flex items-center justify-center w-full">
+                            {isEditingPrice ? (
+                              <input
+                                type="text"
+                                value={tempPriceText}
+                                onChange={(e) => setTempPriceText(e.target.value)}
+                                onBlur={() => savePriceEdit(idx)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") savePriceEdit(idx);
+                                  if (e.key === "Escape") setEditingPriceIndex(null);
+                                }}
+                                className="bg-background/90 text-[10px] text-center border border-border rounded px-1 py-0.5 outline-none w-16"
+                                autoFocus
+                                placeholder="Price..."
+                              />
+                            ) : day.price ? (
+                              <button
+                                onClick={() => triggerPriceEdit(idx, day.price)}
+                                className="text-[10px] font-black text-foreground hover:text-primary transition-colors"
+                              >
+                                ₹{day.price}
+                              </button>
+                            ) : showCalculatedTargets && principalNum > 0 && rateNum > 0 ? (
+                              <button
+                                onClick={() => triggerPriceEdit(idx, targetValStr)}
+                                className="text-[10px] font-medium text-muted-foreground/60 hover:text-primary transition-colors flex items-center gap-0.5 italic"
+                                title="Calculated Target (not stored in DB)"
+                              >
+                                <span>₹{targetValStr}</span>
+                                <span className="text-[7px] bg-primary/10 text-primary px-0.5 rounded font-black not-italic">T</span>
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => triggerPriceEdit(idx, "")}
+                                className="text-[9px] hover:text-foreground text-muted-foreground/50 flex items-center gap-0.5"
+                              >
+                                <Plus className="w-2.5 h-2.5" /> Price
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              </>
+            )}
           </main>
         </div>
       </div>

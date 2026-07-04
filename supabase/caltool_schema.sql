@@ -5,6 +5,7 @@
 -- Drop old tables if they exist to prevent schema collisions
 DROP TABLE IF EXISTS public.tracker_days CASCADE;
 DROP TABLE IF EXISTS public.tracker_categories CASCADE;
+DROP TABLE IF EXISTS public.tracker_notes CASCADE;
 
 -- 1. Tracker Categories Table
 CREATE TABLE IF NOT EXISTS public.tracker_categories (
@@ -30,9 +31,17 @@ CREATE TABLE IF NOT EXISTS public.tracker_days (
     UNIQUE(category_uuid, day_index)
 );
 
+-- 3. Dedicated Notepad Table
+CREATE TABLE IF NOT EXISTS public.tracker_notes (
+    id UUID PRIMARY KEY DEFAULT '00000000-0000-0000-0000-000000000000'::uuid,
+    content TEXT NOT NULL DEFAULT '',
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 -- Disable Row Level Security (RLS) to support public read/write without login requirements
 ALTER TABLE public.tracker_categories DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tracker_notes DISABLE ROW LEVEL SECURITY;
 
 -- SEED DATA: Pre-populate default tracking categories with explicit sorting positions
 INSERT INTO public.tracker_categories (category_id, name, principal, rate, position) VALUES
@@ -43,3 +52,8 @@ INSERT INTO public.tracker_categories (category_id, name, principal, rate, posit
 ('o1', 'Optional 1', 100, 25, 4),
 ('o2', 'Optional 2', 100, 25, 5)
 ON CONFLICT (category_id) DO NOTHING;
+
+-- SEED DATA: Seed default empty notes record
+INSERT INTO public.tracker_notes (id, content) VALUES
+('00000000-0000-0000-0000-000000000000', '')
+ON CONFLICT (id) DO NOTHING;
