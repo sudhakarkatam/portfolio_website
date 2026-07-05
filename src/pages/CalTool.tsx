@@ -8,6 +8,7 @@ interface DayData {
   emoji: string;
   note: string;
   price: string;
+  updatedAt?: string;
 }
 
 interface CategoryConfig {
@@ -16,6 +17,7 @@ interface CategoryConfig {
   name: string;
   principal: string;
   rate: string;
+  isPaused: boolean;
   days: DayData[];
 }
 
@@ -79,6 +81,7 @@ interface ConfirmModalState {
   isOpen: boolean;
   title: string;
   message: string;
+  confirmText?: string;
   onConfirm: () => void;
 }
 
@@ -109,6 +112,7 @@ const CalTool: React.FC = () => {
     isOpen: false,
     title: "",
     message: "",
+    confirmText: "Delete / Reset",
     onConfirm: () => {}
   });
 
@@ -128,6 +132,11 @@ const CalTool: React.FC = () => {
   const [noteContent, setNoteContent] = useState<string>("");
   const [dbNoteContent, setDbNoteContent] = useState<string>("");
 
+  // Dedicated History State
+  const [isHistoryActive, setIsHistoryActive] = useState<boolean>(false);
+  const [historyFilter, setHistoryFilter] = useState<"all" | "checked" | "pending" | "notes" | "prices">("all");
+  const [historyCategoryFilter, setHistoryCategoryFilter] = useState<string>("all");
+
   // Load tracker state directly from database on mount (no admin login required)
   useEffect(() => {
     loadDataFromSupabase();
@@ -136,10 +145,11 @@ const CalTool: React.FC = () => {
   const loadDataFromSupabase = async () => {
     setDbStatus("syncing");
     try {
-      // 1. Fetch categories sorted by sorting position index
+      // 1. Fetch categories sorted by is_paused (active first) and position
       const { data: catData, error: catError } = await supabase
         .from("tracker_categories")
         .select("*")
+        .order("is_paused", { ascending: true })
         .order("position", { ascending: true });
 
       if (catError) {
@@ -207,7 +217,8 @@ const CalTool: React.FC = () => {
                 checked: dbDay.checked,
                 emoji: dbDay.emoji || "✅",
                 note: dbDay.note || "",
-                price: (dbDay.price !== null && dbDay.price !== undefined) ? String(dbDay.price) : ""
+                price: (dbDay.price !== null && dbDay.price !== undefined) ? String(dbDay.price) : "",
+                updatedAt: dbDay.updated_at
               }
             : {
                 checked: false,
@@ -223,6 +234,7 @@ const CalTool: React.FC = () => {
           name: cat.name,
           principal: String(cat.principal ?? 100),
           rate: String(cat.rate ?? 25),
+          isPaused: !!cat.is_paused,
           days
         };
       });
@@ -310,11 +322,12 @@ const CalTool: React.FC = () => {
   };
 
   // Helper trigger for custom confirmation modals
-  const triggerConfirm = (title: string, message: string, onConfirm: () => void) => {
+  const triggerConfirm = (title: string, message: string, onConfirm: () => void, confirmText: string = "Delete / Reset") => {
     setConfirmModal({
       isOpen: true,
       title,
       message,
+      confirmText,
       onConfirm: () => {
         onConfirm();
         setConfirmModal((prev) => ({ ...prev, isOpen: false }));
@@ -417,7 +430,8 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
         const newDays = [...cat.days];
         newDays[dayIndex] = {
           ...newDays[dayIndex],
-          checked: nextChecked
+          checked: nextChecked,
+          updatedAt: new Date().toISOString()
         };
         return { ...cat, days: newDays };
       })
@@ -463,7 +477,8 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
         const newDays = [...cat.days];
         newDays[dayIndex] = {
           ...newDays[dayIndex],
-          [field]: val
+          [field]: val,
+          updatedAt: new Date().toISOString()
         };
         return { ...cat, days: newDays };
       })
@@ -638,6 +653,39 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
     );
   };
 
+  // Toggle pause status on a category
+  const handleTogglePauseCategory = async (catId: string, currentPaused: boolean) => {
+    const targetCat = categories.find((c) => c.id === catId);
+    if (!targetCat?.uuid) return;
+
+    const actionText = currentPaused ? "Resume" : "Pause";
+    const confirmTitle = `${actionText} Tracker Category`;
+    const confirmMsg = currentPaused
+      ? `Would you like to resume "${targetCat.name}"? It will move back to the active section of your sidebar.`
+      : `Are you sure you want to pause "${targetCat.name}"? It will move to the bottom of your sidebar list and be dimmed.`;
+
+    triggerConfirm(
+      confirmTitle,
+      confirmMsg,
+      async () => {
+        setDbStatus("syncing");
+        const { error } = await supabase
+          .from("tracker_categories")
+          .update({ is_paused: !currentPaused })
+          .eq("id", targetCat.uuid);
+
+        if (error) {
+          console.error(`Error toggling pause for category ${catId}:`, error);
+          setDbStatus("error");
+        } else {
+          console.log(`Supabase Sync: Category ${catId} is now ${currentPaused ? "active" : "paused"}.`);
+          await loadDataFromSupabase();
+        }
+      },
+      actionText
+    );
+  };
+
   // Rename categories
   const handleStartRename = (catId: string, currentName: string) => {
     setIsEditingTabName(catId);
@@ -709,6 +757,8 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
 
     setCategories((prev) => [...prev, newCategory]);
     setActiveCategoryId(newId);
+    setIsNotepadActive(false);
+    setIsHistoryActive(false);
     setDbStatus("synced");
   };
 
@@ -823,9 +873,13 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
               </button>
               <button
                 onClick={confirmModal.onConfirm}
-                className="px-3.5 py-1.5 rounded-lg bg-destructive hover:bg-destructive/90 text-white text-xs font-semibold shadow-md shadow-destructive/10 transition-colors"
+                className={`px-3.5 py-1.5 rounded-lg text-white text-xs font-semibold shadow-md transition-colors ${
+                  confirmModal.confirmText && (confirmModal.confirmText.includes("Pause") || confirmModal.confirmText.includes("Resume"))
+                    ? "bg-primary hover:bg-primary/95 shadow-primary/10"
+                    : "bg-destructive hover:bg-destructive/95 shadow-destructive/10"
+                }`}
               >
-                Delete / Reset
+                {confirmModal.confirmText || "Delete / Reset"}
               </button>
             </div>
           </div>
@@ -876,16 +930,23 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
         <div className="flex flex-col md:flex-row gap-6 items-start">
           
           {/* Sidebar Tab Selectors */}
-          <aside className="w-full md:w-48 shrink-0 flex flex-col gap-2 bg-card/10 p-3 rounded-xl border border-border/20">
-            <span className="text-[10px] text-muted-foreground uppercase font-black tracking-wider px-2 mb-1">
+          <aside className="w-full md:w-48 shrink-0 bg-card/10 p-3 rounded-xl border border-border/20">
+            <span className="text-[10px] text-muted-foreground uppercase font-black tracking-wider px-2 mb-1 md:block hidden">
               Select Tracker
             </span>
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-row md:flex-col gap-1.5 overflow-x-auto md:overflow-x-visible pb-1 md:pb-0 items-center md:items-stretch scrollbar-none w-full min-w-0">
               {categories.map((cat, idx) => {
-                const isActive = cat.id === activeCategoryId && !isNotepadActive;
+                const isActive = cat.id === activeCategoryId && !isNotepadActive && !isHistoryActive;
                 const isEditing = isEditingTabName === cat.id;
-
-                const isManageable = cat.id === "o1" || cat.id === "o2" || cat.id.startsWith("custom_");
+                const isManageable = true; // Make all categories editable and deletable
+                const hasPending = cat.days.some((d) => d.checked && d.emoji === "❓");
+                const hasRecentProgress = cat.days.some((d) => {
+                  if (!d.checked || (d.emoji !== "✅" && d.emoji !== "💯")) return false;
+                  if (!d.updatedAt) return false;
+                  const updatedTime = new Date(d.updatedAt).getTime();
+                  const twoDaysAgo = Date.now() - 2 * 24 * 60 * 60 * 1000;
+                  return updatedTime > twoDaysAgo;
+                });
 
                 return (
                   <div
@@ -894,7 +955,7 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
                     onDragStart={(e) => handleDragStart(e, idx)}
                     onDragOver={(e) => handleDragOver(e, idx)}
                     onDragEnd={handleDragEnd}
-                    className={`relative flex items-center w-full cursor-grab active:cursor-grabbing transition-all ${
+                    className={`relative flex items-center w-auto md:w-full cursor-grab active:cursor-grabbing transition-all shrink-0 ${
                       draggedCatIndex === idx ? "opacity-35 scale-95 border-primary/20" : ""
                     }`}
                   >
@@ -921,23 +982,37 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
                           onClick={() => {
                             setActiveCategoryId(cat.id);
                             setIsNotepadActive(false);
+                            setIsHistoryActive(false);
                             setShowCalculatedTargets(false); // Reset targets view on tab switch
                             setEditingNoteIndex(null);
                             setEditingPriceIndex(null);
                           }}
+                          onDoubleClick={() => handleTogglePauseCategory(cat.id, cat.isPaused)}
                           onKeyDown={(e) => {
                             if (e.key === "Enter" || e.key === " ") {
                               setActiveCategoryId(cat.id);
                               setIsNotepadActive(false);
+                              setIsHistoryActive(false);
                               setShowCalculatedTargets(false);
                               setEditingNoteIndex(null);
                               setEditingPriceIndex(null);
                             }
                           }}
+                          title="Double-click to Pause / Resume tracker"
                           className={`text-xs font-semibold px-3 py-2.5 rounded-lg border w-full text-left flex justify-between items-center transition-all cursor-pointer ${
-                            isActive
-                              ? "bg-primary text-primary-foreground border-transparent shadow-sm"
-                              : "bg-card/30 text-muted-foreground border-border/30 hover:bg-card/50 hover:text-foreground"
+                            cat.isPaused
+                              ? "bg-zinc-800/10 text-zinc-500 border-zinc-800/25 grayscale blur-[0.6px] opacity-40 hover:opacity-60"
+                              : isActive
+                                ? hasPending
+                                  ? "bg-amber-500 text-zinc-950 border-transparent shadow-sm font-bold"
+                                  : hasRecentProgress
+                                    ? "bg-emerald-600 text-white border-transparent shadow-sm font-bold"
+                                    : "bg-primary text-primary-foreground border-transparent shadow-sm"
+                                : hasPending
+                                  ? "bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20 hover:text-amber-300"
+                                  : hasRecentProgress
+                                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20 hover:text-emerald-300"
+                                    : "bg-card/30 text-muted-foreground border-border/30 hover:bg-card/50 hover:text-foreground"
                           }`}
                         >
                           <div className="flex items-center gap-1.5 min-w-0">
@@ -946,10 +1021,34 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
                               ⋮⋮
                             </span>
                             <span className="capitalize truncate max-w-[80px]">{cat.name}</span>
+                            {cat.isPaused && (
+                              <span className="text-[7px] font-bold text-zinc-500 bg-zinc-800/30 border border-zinc-700/30 px-1 rounded uppercase tracking-wider shrink-0 select-none ml-1.5">
+                                paused
+                              </span>
+                            )}
+                            {(() => {
+                              const completedDays = cat.days
+                                .map((day, idx) => ({ ...day, dayIndex: idx + 1 }))
+                                .filter((d) => d.checked && (d.emoji === "✅" || d.emoji === "💯"));
+                              const maxCompletedDay = completedDays.length > 0
+                                ? Math.max(...completedDays.map((d) => d.dayIndex))
+                                : 0;
+                              return (
+                                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md shrink-0 ml-1.5 ${
+                                  cat.isPaused
+                                    ? "bg-zinc-800/50 text-zinc-500 border border-zinc-700/20"
+                                    : isActive
+                                      ? "bg-white/20 text-white"
+                                      : "bg-primary/10 text-primary border border-primary/20"
+                                }`}>
+                                  {maxCompletedDay}
+                                </span>
+                              );
+                            })()}
                           </div>
                           
                           {isManageable && (
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex items-center gap-1 opacity-70 md:opacity-0 md:group-hover:opacity-100 transition-opacity ml-2">
                               <span
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -982,29 +1081,51 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
               {/* Add Tracker Button */}
               <button
                 onClick={handleAddCategory}
-                className="text-[11px] font-semibold px-3 py-2 rounded-lg border border-dashed border-border hover:border-primary/50 hover:text-primary transition-all text-muted-foreground flex items-center justify-center gap-1.5 mt-2 w-full"
+                className="text-[11px] font-semibold px-3 py-2 rounded-lg border border-dashed border-border hover:border-primary/50 hover:text-primary transition-all text-muted-foreground flex items-center justify-center gap-1.5 w-auto md:w-full mt-0 md:mt-2 shrink-0 h-[38px] md:h-auto"
               >
                 <Plus className="w-3.5 h-3.5" />
                 Add Tracker
               </button>
 
-              {/* Divider and Notepad Tab */}
-              <div className="border-t border-border/20 my-2 pt-2" />
+              {/* Responsive Divider */}
+              <div className="border-l md:border-l-0 md:border-t border-border/20 h-6 md:h-0 my-0 md:my-2 mx-1.5 md:mx-0 pt-0 md:pt-2 shrink-0 self-center" />
+              
+              {/* Notepad Button */}
               <button
                 onClick={() => {
                   setIsNotepadActive(true);
+                  setIsHistoryActive(false);
                   setShowCalculatedTargets(false);
                   setEditingNoteIndex(null);
                   setEditingPriceIndex(null);
                 }}
-                className={`text-xs font-semibold px-3 py-2.5 rounded-lg border w-full text-left flex items-center gap-2 transition-all ${
+                className={`text-xs font-semibold px-3 py-2.5 rounded-lg border w-auto md:w-full text-left flex items-center gap-2 transition-all shrink-0 ${
                   isNotepadActive
                     ? "bg-primary text-primary-foreground border-transparent shadow-sm"
                     : "bg-card/30 text-muted-foreground border-border/30 hover:bg-card/50 hover:text-foreground"
                 }`}
               >
                 <span>📓</span>
-                <span>Notepad / Scratch</span>
+                <span>Notepad</span>
+              </button>
+
+              {/* History Button */}
+              <button
+                onClick={() => {
+                  setIsHistoryActive(true);
+                  setIsNotepadActive(false);
+                  setShowCalculatedTargets(false);
+                  setEditingNoteIndex(null);
+                  setEditingPriceIndex(null);
+                }}
+                className={`text-xs font-semibold px-3 py-2.5 rounded-lg border w-auto md:w-full text-left flex items-center gap-2 transition-all shrink-0 ${
+                  isHistoryActive
+                    ? "bg-primary text-primary-foreground border-transparent shadow-sm"
+                    : "bg-card/30 text-muted-foreground border-border/30 hover:bg-card/50 hover:text-foreground"
+                }`}
+              >
+                <span>📜</span>
+                <span>History</span>
               </button>
             </div>
           </aside>
@@ -1055,6 +1176,199 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
                   {dbStatus === "synced" && <span className="text-emerald-400 font-semibold">● Saved to Cloud</span>}
                   {dbStatus === "syncing" && <span className="text-amber-400 animate-pulse font-semibold">● Saving Changes...</span>}
                   {dbStatus === "error" && <span className="text-destructive font-semibold">● Save Failed</span>}
+                </div>
+              </section>
+            ) : isHistoryActive ? (
+              /* Dedicated History Panel */
+              <section className="bg-card/30 border border-border/40 backdrop-blur-md rounded-xl p-6 shadow-sm w-full flex flex-col gap-6 min-h-[500px]">
+                {/* Header */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-border/40 pb-4 gap-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg animate-pulse">📜</span>
+                    <div>
+                      <h2 className="text-sm font-bold text-foreground">Tracker History & Activity Logs</h2>
+                      <p className="text-[10px] text-muted-foreground">Detailed logs of checked days, custom prices, and notes categorized by category</p>
+                    </div>
+                  </div>
+
+                  {/* Category & Status Filter Controls */}
+                  <div className="flex flex-wrap items-center gap-3">
+                    {/* Category Dropdown Selector */}
+                    <select
+                      value={historyCategoryFilter}
+                      onChange={(e) => setHistoryCategoryFilter(e.target.value)}
+                      className="bg-background border border-border/80 text-foreground text-[10px] font-semibold rounded-lg px-2.5 py-1.5 focus:border-primary/50 outline-none cursor-pointer shadow-sm capitalize"
+                    >
+                      <option value="all">All Trackers</option>
+                      {categories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
+
+                    <div className="flex flex-wrap items-center gap-1.5 bg-background/50 border border-border/50 p-1 rounded-lg">
+                      {[
+                        { id: "all", label: "All Logs", icon: "📁" },
+                        { id: "checked", label: "Checked", icon: "✅" },
+                        { id: "pending", label: "Pending", icon: "❓" },
+                        { id: "notes", label: "With Notes", icon: "📝" },
+                        { id: "prices", label: "With Prices", icon: "💰" }
+                      ].map((btn) => (
+                        <button
+                          key={btn.id}
+                          onClick={() => setHistoryFilter(btn.id as any)}
+                          className={`text-[10px] px-2.5 py-1 rounded font-semibold transition-all flex items-center gap-1 ${
+                            historyFilter === btn.id
+                              ? "bg-primary text-primary-foreground shadow-sm"
+                              : "hover:bg-accent text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          <span>{btn.icon}</span>
+                          <span>{btn.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* History Content - Chronological Timeline Log */}
+                <div className="flex flex-col gap-6">
+                  {(() => {
+                    // Extract and flatten day items with notes, prices, or checked states across all categories
+                    const recentLogs = categories.flatMap((cat) => 
+                      cat.days
+                        .map((day, idx) => ({
+                          ...day,
+                          dayIndex: idx + 1,
+                          categoryName: cat.name,
+                          categoryId: cat.id
+                        }))
+                        .filter((day) => {
+                          // Apply category filter selection
+                          if (historyCategoryFilter !== "all" && day.categoryId !== historyCategoryFilter) {
+                            return false;
+                          }
+                          // Apply status filter selection
+                          if (historyFilter === "all") {
+                            return day.checked || day.note || day.price;
+                          }
+                          if (historyFilter === "checked") {
+                            return day.checked && (day.emoji === "✅" || day.emoji === "💯");
+                          }
+                          if (historyFilter === "pending") {
+                            return day.checked && day.emoji === "❓";
+                          }
+                          if (historyFilter === "notes") {
+                            return day.note && day.note.trim() !== "";
+                          }
+                          if (historyFilter === "prices") {
+                            return day.price && day.price.trim() !== "";
+                          }
+                          return false;
+                        })
+                    ).sort((a, b) => {
+                      const timeA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+                      const timeB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+                      return timeB - timeA; // Most recent first
+                    });
+
+                    if (recentLogs.length === 0) {
+                      return (
+                        <div className="flex flex-col items-center justify-center p-12 border border-dashed border-border/60 rounded-xl bg-background/20 text-center">
+                          <span className="text-2xl mb-2">⏱️</span>
+                          <h4 className="text-xs font-semibold text-foreground mb-1">No Recent Logs Found</h4>
+                          <p className="text-[10px] text-muted-foreground max-w-xs leading-relaxed">
+                            No logs match the current filter selection or no actions have been taken on your trackers yet.
+                          </p>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="border border-border/50 rounded-xl bg-card/20 overflow-hidden shadow-sm divide-y divide-border/30">
+                        {recentLogs.map((log, logIdx) => {
+                          const isCompleted = log.checked && (log.emoji === "✅" || log.emoji === "💯");
+                          const isPending = log.checked && log.emoji === "❓";
+                          const catTheme = CATEGORY_THEMES[log.categoryId] || CATEGORY_THEMES.p1;
+                          
+                          // Format date nicely in local format
+                          const formattedTime = (() => {
+                            if (!log.updatedAt) return "Recently Updated";
+                            try {
+                              const d = new Date(log.updatedAt);
+                              return d.toLocaleString("en-IN", {
+                                dateStyle: "medium",
+                                timeStyle: "short"
+                              });
+                            } catch {
+                              return "Recently Updated";
+                            }
+                          })();
+
+                          return (
+                            <div key={`${log.categoryId}-d${log.dayIndex}-${logIdx}`} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-card/40 transition-colors">
+                              {/* Left details: Timestamp, Category Indicator, Day Index, Status */}
+                              <div className="flex items-center gap-3 flex-wrap">
+                                {/* Time display */}
+                                <div className="text-[9px] font-black text-muted-foreground/60 bg-background border border-border/40 px-2 py-1 rounded shrink-0">
+                                  {formattedTime}
+                                </div>
+
+                                {/* Category Tag */}
+                                <div className={`text-[10px] font-bold text-white bg-gradient-to-r ${catTheme.primary} px-2.5 py-0.5 rounded-full shrink-0 shadow-sm capitalize`}>
+                                  {log.categoryName}
+                                </div>
+
+                                {/* Day label */}
+                                <div className="text-[10px] font-black text-foreground bg-accent/25 border border-border/30 px-2 py-0.5 rounded shrink-0">
+                                  Day {log.dayIndex}
+                                </div>
+
+                                {/* Emoji Status */}
+                                {log.checked ? (
+                                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1 shrink-0 ${
+                                    isCompleted
+                                      ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                                      : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                                  }`}>
+                                    <span>{log.emoji}</span>
+                                    <span>{isCompleted ? "Completed" : "Pending"}</span>
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-zinc-500/10 text-zinc-400 border border-zinc-500/25 shrink-0">
+                                    Unchecked
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Right details: Custom Note & Custom Price */}
+                              <div className="flex flex-grow items-center justify-end gap-6 flex-wrap md:flex-nowrap">
+                                {/* Note bubble */}
+                                {log.note ? (
+                                  <div className="text-[10px] text-foreground bg-background/50 border border-border/40 px-2.5 py-1.5 rounded-lg max-w-md flex-grow whitespace-pre-wrap leading-normal font-medium text-left">
+                                    <span className="text-muted-foreground font-semibold block text-[8px] uppercase tracking-wider mb-0.5">Note:</span>
+                                    {log.note}
+                                  </div>
+                                ) : (
+                                  <div className="text-[9px] text-muted-foreground/30 italic">No note added</div>
+                                )}
+
+                                {/* Price indicator */}
+                                {log.price ? (
+                                  <div className="text-[10px] font-black text-foreground bg-primary/10 border border-primary/20 px-2 py-1 rounded shrink-0">
+                                    ₹{log.price}
+                                  </div>
+                                ) : (
+                                  <div className="text-[9px] text-muted-foreground/30 italic shrink-0">No price override</div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
                 </div>
               </section>
             ) : (
@@ -1121,7 +1435,18 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
                     {activeCategory.days.map((day, idx) => {
                       const dayIndex = idx + 1;
                       const isChecked = day.checked;
-                      const cardClass = isChecked ? theme.cardChecked : theme.cardUnchecked;
+                      const isRecentDayProgress = isChecked && (day.emoji === "✅" || day.emoji === "💯") && (() => {
+                        if (!day.updatedAt) return false;
+                        const updatedTime = new Date(day.updatedAt).getTime();
+                        const twoDaysAgo = Date.now() - 2 * 24 * 60 * 60 * 1000;
+                        return updatedTime > twoDaysAgo;
+                      })();
+
+                      const cardClass = isRecentDayProgress
+                        ? "bg-emerald-950/25 border-emerald-500/45 shadow-[0_0_10px_rgba(16,185,129,0.15)] text-emerald-400"
+                        : isChecked
+                          ? theme.cardChecked
+                          : theme.cardUnchecked;
 
                       const isEditingNote = editingNoteIndex === idx;
                       const isEditingPrice = editingPriceIndex === idx;
@@ -1148,43 +1473,46 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
                             </button>
                           )}
 
-                          {/* Top line: Day label and note element */}
+                          {/* Top line: Day label only */}
                           <div className="flex items-center justify-between text-[11px] text-muted-foreground w-full">
                             <span className="font-semibold">Day {dayIndex}</span>
+                          </div>
 
-                            {/* Above Checkbox: Note content or toggle */}
-                            <div className="flex justify-end">
-                              {isEditingNote ? (
-                                <input
-                                  type="text"
-                                  value={tempNoteText}
-                                  onChange={(e) => setTempNoteText(e.target.value)}
-                                  onBlur={() => saveNoteEdit(idx)}
-                                  onKeyDown={(e) => {
-                                      if (e.key === "Enter") saveNoteEdit(idx);
-                                      if (e.key === "Escape") setEditingNoteIndex(null);
-                                    }}
-                                  className="bg-background/90 text-[10px] border border-border rounded px-1 py-0.5 outline-none w-16"
-                                  autoFocus
-                                  placeholder="Note..."
-                                />
-                              ) : day.note ? (
-                                <button
-                                  onClick={() => triggerNoteEdit(idx, day.note)}
-                                  className="text-[10px] text-foreground bg-primary/10 border border-primary/20 px-1 py-0.5 rounded truncate max-w-[65px] font-medium"
-                                  title={day.note}
-                                >
-                                  {day.note}
-                                </button>
-                              ) : (
-                                <button
-                                  onClick={() => triggerNoteEdit(idx, "")}
-                                  className="text-[9px] hover:text-foreground text-muted-foreground/50 flex items-center gap-0.5"
-                                >
-                                  <Plus className="w-2.5 h-2.5" /> Note
-                                </button>
-                              )}
-                            </div>
+                          {/* Above Checkbox Note Area: positioned below the Day X title using free space */}
+                          <div className="w-full mt-0.5 flex justify-start relative">
+                            {isEditingNote ? (
+                              <textarea
+                                value={tempNoteText}
+                                onChange={(e) => setTempNoteText(e.target.value)}
+                                onBlur={() => saveNoteEdit(idx)}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter" && !e.shiftKey) {
+                                      e.preventDefault();
+                                      saveNoteEdit(idx);
+                                    }
+                                    if (e.key === "Escape") setEditingNoteIndex(null);
+                                  }}
+                                className="absolute top-0 left-0 bg-card border border-primary/50 rounded-lg p-1.5 text-[9px] w-full h-24 outline-none shadow-xl z-20 resize-none font-mono text-foreground leading-normal"
+                                autoFocus
+                                placeholder="Note..."
+                                rows={5}
+                              />
+                            ) : day.note ? (
+                              <button
+                                onClick={() => triggerNoteEdit(idx, day.note)}
+                                className="text-[9px] text-foreground bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded w-full font-medium leading-tight text-left whitespace-pre-wrap line-clamp-5 hover:bg-primary/20 transition-all"
+                                title={day.note}
+                              >
+                                {day.note}
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => triggerNoteEdit(idx, "")}
+                                className="text-[9px] hover:text-foreground text-muted-foreground/50 flex items-center gap-0.5"
+                              >
+                                <Plus className="w-2.5 h-2.5" /> Note
+                              </button>
+                            )}
                           </div>
 
                           {/* Middle Checkbox (Centered with Pop Animation) */}
@@ -1243,14 +1571,8 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
                                 autoFocus
                                 placeholder="Price..."
                               />
-                            ) : day.price ? (
-                              <button
-                                onClick={() => triggerPriceEdit(idx, day.price)}
-                                className="text-[10px] font-black text-foreground hover:text-primary transition-colors"
-                              >
-                                ₹{day.price}
-                              </button>
                             ) : showCalculatedTargets && principalNum > 0 && rateNum > 0 ? (
+                              /* Show calculated target value when overlay calculations are active */
                               <button
                                 onClick={() => triggerPriceEdit(idx, targetValStr)}
                                 className="text-[10px] font-medium text-muted-foreground/60 hover:text-primary transition-colors flex items-center gap-0.5 italic"
@@ -1259,7 +1581,16 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
                                 <span>₹{targetValStr}</span>
                                 <span className="text-[7px] bg-primary/10 text-primary px-0.5 rounded font-black not-italic">T</span>
                               </button>
+                            ) : day.price ? (
+                              /* Show custom saved price if overlay is not active */
+                              <button
+                                onClick={() => triggerPriceEdit(idx, day.price)}
+                                className="text-[10px] font-black text-foreground hover:text-primary transition-colors"
+                              >
+                                ₹{day.price}
+                              </button>
                             ) : (
+                              /* Show Add Price button */
                               <button
                                 onClick={() => triggerPriceEdit(idx, "")}
                                 className="text-[9px] hover:text-foreground text-muted-foreground/50 flex items-center gap-0.5"
