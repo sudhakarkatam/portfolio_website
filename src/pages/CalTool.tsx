@@ -21,6 +21,19 @@ interface CategoryConfig {
   days: DayData[];
 }
 
+interface LogData {
+  id: string;
+  category_id: string;
+  category_name: string;
+  day_index: number;
+  checked: boolean;
+  emoji: string;
+  note: string;
+  price: string;
+  logged_at: string;
+}
+
+
 const CATEGORY_THEMES: Record<
   string,
   {
@@ -96,6 +109,7 @@ const safeParseFloat = (val: string | number | null | undefined): number | null 
 
 const CalTool: React.FC = () => {
   const [categories, setCategories] = useState<CategoryConfig[]>([]);
+  const [dbLogs, setDbLogs] = useState<LogData[]>([]);
   const [activeCategoryId, setActiveCategoryId] = useState<string>("p1");
   const [isEditingTabName, setIsEditingTabName] = useState<string | null>(null);
   const [editTabNameVal, setEditTabNameVal] = useState<string>("");
@@ -239,6 +253,29 @@ const CalTool: React.FC = () => {
         };
       });
 
+      // 4. Fetch history logs
+      const { data: logsData, error: logsError } = await supabase
+        .from("tracker_logs")
+        .select("*")
+        .order("logged_at", { ascending: false });
+
+      if (logsError) {
+        console.error("Supabase load logs error:", logsError);
+      } else if (logsData) {
+        const formattedLogs: LogData[] = logsData.map((l) => ({
+          id: l.id,
+          category_id: l.category_id,
+          category_name: l.category_name,
+          day_index: l.day_index,
+          checked: l.checked,
+          emoji: l.emoji || "✅",
+          note: l.note || "",
+          price: (l.price !== null && l.price !== undefined) ? String(l.price) : "",
+          logged_at: l.logged_at
+        }));
+        setDbLogs(formattedLogs);
+      }
+
       setCategories(formattedCategories);
       setDbStatus("synced");
     } catch (err) {
@@ -365,6 +402,8 @@ const CalTool: React.FC = () => {
             <pre className="bg-background text-[10px] p-3 rounded-lg overflow-x-auto text-muted-foreground border border-border/50 max-h-48 text-left select-all font-mono leading-relaxed">
 {`DROP TABLE IF EXISTS public.tracker_days CASCADE;
 DROP TABLE IF EXISTS public.tracker_categories CASCADE;
+DROP TABLE IF EXISTS public.tracker_notes CASCADE;
+DROP TABLE IF EXISTS public.tracker_logs CASCADE;
 
 CREATE TABLE IF NOT EXISTS public.tracker_categories (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -373,6 +412,7 @@ CREATE TABLE IF NOT EXISTS public.tracker_categories (
     principal NUMERIC NOT NULL DEFAULT 100,
     rate NUMERIC NOT NULL DEFAULT 25,
     position INT NOT NULL DEFAULT 0,
+    is_paused BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -388,8 +428,28 @@ CREATE TABLE IF NOT EXISTS public.tracker_days (
     UNIQUE(category_uuid, day_index)
 );
 
+CREATE TABLE IF NOT EXISTS public.tracker_notes (
+    id UUID PRIMARY KEY DEFAULT '00000000-0000-0000-0000-000000000000'::uuid,
+    content TEXT NOT NULL DEFAULT '',
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.tracker_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    category_id VARCHAR(50) NOT NULL,
+    category_name VARCHAR(100) NOT NULL,
+    day_index INT NOT NULL CHECK (day_index >= 1 AND day_index <= 30),
+    checked BOOLEAN NOT NULL DEFAULT false,
+    emoji VARCHAR(10) NOT NULL DEFAULT '✅',
+    note TEXT DEFAULT '',
+    price NUMERIC,
+    logged_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 ALTER TABLE public.tracker_categories DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
+ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tracker_notes DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tracker_logs DISABLE ROW LEVEL SECURITY;`}
             </pre>
           </div>
           <div className="flex justify-end gap-3">
@@ -417,11 +477,12 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
   }
 
   // Toggle check/uncheck (relational update)
-  const handleToggleDay = async (dayIndex: number) => {
+  const handleToggleDay = async (dayIndex: number, chosenEmoji?: string) => {
     if (!activeCategory) return;
     
     const currentChecked = activeCategory.days[dayIndex].checked;
     const nextChecked = !currentChecked;
+    const emojiToSet = chosenEmoji || activeCategory.days[dayIndex].emoji || "✅";
 
     // Update locally
     setCategories((prev) =>
@@ -431,6 +492,7 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
         newDays[dayIndex] = {
           ...newDays[dayIndex],
           checked: nextChecked,
+          emoji: emojiToSet,
           updatedAt: new Date().toISOString()
         };
         return { ...cat, days: newDays };
@@ -450,7 +512,7 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
             category_uuid: activeCategory.uuid,
             day_index: dayIndex + 1,
             checked: nextChecked,
-            emoji: updatedDay.emoji,
+            emoji: emojiToSet,
             note: updatedDay.note,
             price: safeParseFloat(updatedDay.price),
             updated_at: new Date().toISOString()
@@ -464,6 +526,39 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
       } else {
         console.log("Supabase Sync success: Checked status updated successfully.");
         setDbStatus("synced");
+
+        // Insert history log
+        const { data: newLog, error: logError } = await supabase
+          .from("tracker_logs")
+          .insert({
+            category_id: activeCategory.id,
+            category_name: activeCategory.name,
+            day_index: dayIndex + 1,
+            checked: nextChecked,
+            emoji: emojiToSet,
+            note: updatedDay.note,
+            price: safeParseFloat(updatedDay.price),
+            logged_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+
+        if (!logError && newLog) {
+          const formattedLog: LogData = {
+            id: newLog.id,
+            category_id: newLog.category_id,
+            category_name: newLog.category_name,
+            day_index: newLog.day_index,
+            checked: newLog.checked,
+            emoji: newLog.emoji || "✅",
+            note: newLog.note || "",
+            price: (newLog.price !== null && newLog.price !== undefined) ? String(newLog.price) : "",
+            logged_at: newLog.logged_at
+          };
+          setDbLogs((prev) => [formattedLog, ...prev]);
+        } else if (logError) {
+          console.error("Error inserting history log to Supabase:", logError);
+        }
       }
     }
   };
@@ -516,6 +611,39 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
       } else {
         console.log("Supabase Sync success: Day field updated successfully.");
         setDbStatus("synced");
+
+        // Insert history log
+        const { data: newLog, error: logError } = await supabase
+          .from("tracker_logs")
+          .insert({
+            category_id: activeCategory.id,
+            category_name: activeCategory.name,
+            day_index: dayIndex + 1,
+            checked: updatedDay.checked,
+            emoji: updatedDay.emoji,
+            note: updatedDay.note,
+            price: safeParseFloat(updatedDay.price),
+            logged_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+
+        if (!logError && newLog) {
+          const formattedLog: LogData = {
+            id: newLog.id,
+            category_id: newLog.category_id,
+            category_name: newLog.category_name,
+            day_index: newLog.day_index,
+            checked: newLog.checked,
+            emoji: newLog.emoji || "✅",
+            note: newLog.note || "",
+            price: (newLog.price !== null && newLog.price !== undefined) ? String(newLog.price) : "",
+            logged_at: newLog.logged_at
+          };
+          setDbLogs((prev) => [formattedLog, ...prev]);
+        } else if (logError) {
+          console.error("Error inserting history log to Supabase:", logError);
+        }
       }
     }
   };
@@ -615,10 +743,10 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
             setDbStatus("synced");
           }
         }
-      }
+      },
+      "Reset"
     );
   };
-
   // Reset all categories (re-seeds default categories in database with Custom Dialog Confirmation)
   const handleResetAllData = () => {
     triggerConfirm(
@@ -649,7 +777,8 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
         setShowCalculatedTargets(false);
         setEditingNoteIndex(null);
         setEditingPriceIndex(null);
-      }
+      },
+      "Reset All"
     );
   };
 
@@ -796,7 +925,56 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
         setDbStatus("synced");
         setEditingNoteIndex(null);
         setEditingPriceIndex(null);
-      }
+      },
+      "Delete"
+    );
+  };
+
+  // Delete a specific history log item
+  const handleDeleteLog = (logId: string) => {
+    triggerConfirm(
+      "Delete History Log",
+      "Are you sure you want to permanently delete this log entry? This action is irreversible.",
+      async () => {
+        setDbStatus("syncing");
+        const { error } = await supabase
+          .from("tracker_logs")
+          .delete()
+          .eq("id", logId);
+
+        if (error) {
+          console.error("Error deleting history log from Supabase:", error);
+          setDbStatus("error");
+        } else {
+          setDbLogs((prev) => prev.filter((log) => log.id !== logId));
+          setDbStatus("synced");
+        }
+      },
+      "Delete"
+    );
+  };
+
+  // Delete all history logs
+  const handleResetLogs = () => {
+    triggerConfirm(
+      "Clear All History Logs",
+      "Are you sure you want to permanently clear all activity history logs from Supabase? This action is irreversible.",
+      async () => {
+        setDbStatus("syncing");
+        const { error } = await supabase
+          .from("tracker_logs")
+          .delete()
+          .neq("category_id", "force_non_empty_delete");
+
+        if (error) {
+          console.error("Error resetting history logs in Supabase:", error);
+          setDbStatus("error");
+        } else {
+          setDbLogs([]);
+          setDbStatus("synced");
+        }
+      },
+      "Clear All"
     );
   };
 
@@ -1029,18 +1207,23 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
                             {(() => {
                               const completedDays = cat.days
                                 .map((day, idx) => ({ ...day, dayIndex: idx + 1 }))
-                                .filter((d) => d.checked && (d.emoji === "✅" || d.emoji === "💯"));
+                                .filter((d) => d.checked);
                               const maxCompletedDay = completedDays.length > 0
                                 ? Math.max(...completedDays.map((d) => d.dayIndex))
                                 : 0;
+                              const topDay = cat.days[maxCompletedDay - 1];
+                              const isTopDayPending = topDay && topDay.checked && topDay.emoji === "❓";
+
+                              const badgeClass = cat.isPaused
+                                ? "bg-zinc-800/50 text-zinc-500 border border-zinc-700/20"
+                                : isTopDayPending
+                                  ? "bg-red-600 text-white font-black border border-red-700/30 shadow-[0_0_8px_rgba(220,38,38,0.25)] animate-pulse"
+                                  : isActive
+                                    ? "bg-white/20 text-white"
+                                    : "bg-primary/10 text-primary border border-primary/20";
+
                               return (
-                                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md shrink-0 ml-1.5 ${
-                                  cat.isPaused
-                                    ? "bg-zinc-800/50 text-zinc-500 border border-zinc-700/20"
-                                    : isActive
-                                      ? "bg-white/20 text-white"
-                                      : "bg-primary/10 text-primary border border-primary/20"
-                                }`}>
+                                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md shrink-0 ml-1.5 ${badgeClass}`}>
                                   {maxCompletedDay}
                                 </span>
                               );
@@ -1152,7 +1335,8 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
                         () => {
                           setNoteContent("");
                           saveNoteToDb("");
-                        }
+                        },
+                        "Clear"
                       );
                     }}
                     className="flex items-center gap-1.5 text-xs text-destructive border border-destructive/20 px-3 py-1.5 rounded-lg hover:bg-destructive/10 transition-colors"
@@ -1229,53 +1413,53 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
                         </button>
                       ))}
                     </div>
+
+                    {/* Clear Logs Button */}
+                    <button
+                      onClick={handleResetLogs}
+                      className="flex items-center gap-1.5 text-xs text-destructive border border-destructive/20 px-3 py-1.5 rounded-lg hover:bg-destructive/10 transition-colors"
+                      title="Clear all activity history logs"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Clear Logs
+                    </button>
                   </div>
                 </div>
 
                 {/* History Content - Chronological Timeline Log */}
                 <div className="flex flex-col gap-6">
                   {(() => {
-                    // Extract and flatten day items with notes, prices, or checked states across all categories
-                    const recentLogs = categories.flatMap((cat) => 
-                      cat.days
-                        .map((day, idx) => ({
-                          ...day,
-                          dayIndex: idx + 1,
-                          categoryName: cat.name,
-                          categoryId: cat.id
-                        }))
-                        .filter((day) => {
-                          // Apply category filter selection
-                          if (historyCategoryFilter !== "all" && day.categoryId !== historyCategoryFilter) {
-                            return false;
-                          }
-                          // Apply status filter selection
-                          if (historyFilter === "all") {
-                            return day.checked || day.note || day.price;
-                          }
-                          if (historyFilter === "checked") {
-                            return day.checked && (day.emoji === "✅" || day.emoji === "💯");
-                          }
-                          if (historyFilter === "pending") {
-                            return day.checked && day.emoji === "❓";
-                          }
-                          if (historyFilter === "notes") {
-                            return day.note && day.note.trim() !== "";
-                          }
-                          if (historyFilter === "prices") {
-                            return day.price && day.price.trim() !== "";
-                          }
-                          return false;
-                        })
-                    ).sort((a, b) => {
-                      const timeA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
-                      const timeB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+                    const recentLogs = [...dbLogs].filter((log) => {
+                      // Apply category filter selection
+                      if (historyCategoryFilter !== "all" && log.category_id !== historyCategoryFilter) {
+                        return false;
+                      }
+                      // Apply status filter selection
+                      if (historyFilter === "all") {
+                        return true;
+                      }
+                      if (historyFilter === "checked") {
+                        return log.checked && (log.emoji === "✅" || log.emoji === "💯");
+                      }
+                      if (historyFilter === "pending") {
+                        return log.checked && log.emoji === "❓";
+                      }
+                      if (historyFilter === "notes") {
+                        return log.note && log.note.trim() !== "";
+                      }
+                      if (historyFilter === "prices") {
+                        return log.price && log.price.trim() !== "";
+                      }
+                      return false;
+                    }).sort((a, b) => {
+                      const timeA = a.logged_at ? new Date(a.logged_at).getTime() : 0;
+                      const timeB = b.logged_at ? new Date(b.logged_at).getTime() : 0;
                       return timeB - timeA; // Most recent first
                     });
 
                     if (recentLogs.length === 0) {
                       return (
-                        <div className="flex flex-col items-center justify-center p-12 border border-dashed border-border/60 rounded-xl bg-background/20 text-center">
+                        <div className="flex flex-col items-center justify-center p-12 border border-dashed border-border/60 rounded-xl bg-background/20 text-center animate-fade-in">
                           <span className="text-2xl mb-2">⏱️</span>
                           <h4 className="text-xs font-semibold text-foreground mb-1">No Recent Logs Found</h4>
                           <p className="text-[10px] text-muted-foreground max-w-xs leading-relaxed">
@@ -1289,14 +1473,13 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
                       <div className="border border-border/50 rounded-xl bg-card/20 overflow-hidden shadow-sm divide-y divide-border/30">
                         {recentLogs.map((log, logIdx) => {
                           const isCompleted = log.checked && (log.emoji === "✅" || log.emoji === "💯");
-                          const isPending = log.checked && log.emoji === "❓";
-                          const catTheme = CATEGORY_THEMES[log.categoryId] || CATEGORY_THEMES.p1;
+                          const catTheme = CATEGORY_THEMES[log.category_id] || CATEGORY_THEMES.p1;
                           
                           // Format date nicely in local format
                           const formattedTime = (() => {
-                            if (!log.updatedAt) return "Recently Updated";
+                            if (!log.logged_at) return "Recently Updated";
                             try {
-                              const d = new Date(log.updatedAt);
+                              const d = new Date(log.logged_at);
                               return d.toLocaleString("en-IN", {
                                 dateStyle: "medium",
                                 timeStyle: "short"
@@ -1307,7 +1490,7 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
                           })();
 
                           return (
-                            <div key={`${log.categoryId}-d${log.dayIndex}-${logIdx}`} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-card/40 transition-colors">
+                            <div key={`${log.category_id}-d${log.day_index}-${logIdx}`} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-card/40 transition-colors">
                               {/* Left details: Timestamp, Category Indicator, Day Index, Status */}
                               <div className="flex items-center gap-3 flex-wrap">
                                 {/* Time display */}
@@ -1317,12 +1500,12 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
 
                                 {/* Category Tag */}
                                 <div className={`text-[10px] font-bold text-white bg-gradient-to-r ${catTheme.primary} px-2.5 py-0.5 rounded-full shrink-0 shadow-sm capitalize`}>
-                                  {log.categoryName}
+                                  {log.category_name}
                                 </div>
 
                                 {/* Day label */}
                                 <div className="text-[10px] font-black text-foreground bg-accent/25 border border-border/30 px-2 py-0.5 rounded shrink-0">
-                                  Day {log.dayIndex}
+                                  Day {log.day_index}
                                 </div>
 
                                 {/* Emoji Status */}
@@ -1342,7 +1525,7 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
                                 )}
                               </div>
 
-                              {/* Right details: Custom Note & Custom Price */}
+                              {/* Right details: Custom Note, Custom Price & Log Deletion */}
                               <div className="flex flex-grow items-center justify-end gap-6 flex-wrap md:flex-nowrap">
                                 {/* Note bubble */}
                                 {log.note ? (
@@ -1362,6 +1545,15 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
                                 ) : (
                                   <div className="text-[9px] text-muted-foreground/30 italic shrink-0">No price override</div>
                                 )}
+
+                                {/* Delete log button */}
+                                <button
+                                  onClick={() => handleDeleteLog(log.id)}
+                                  className="p-1.5 rounded-lg border border-destructive/20 text-destructive hover:bg-destructive/10 hover:border-destructive/30 transition-all shrink-0 ml-2"
+                                  title="Delete log entry"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
                               </div>
                             </div>
                           );
@@ -1442,11 +1634,15 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
                         return updatedTime > twoDaysAgo;
                       })();
 
-                      const cardClass = isRecentDayProgress
-                        ? "bg-emerald-950/25 border-emerald-500/45 shadow-[0_0_10px_rgba(16,185,129,0.15)] text-emerald-400"
-                        : isChecked
-                          ? theme.cardChecked
-                          : theme.cardUnchecked;
+                      const isPending = isChecked && day.emoji === "❓";
+
+                      const cardClass = isPending
+                        ? "bg-amber-950/20 border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.15)] text-amber-400"
+                        : isRecentDayProgress
+                          ? "bg-emerald-950/25 border-emerald-500/45 shadow-[0_0_10px_rgba(16,185,129,0.15)] text-emerald-400"
+                          : isChecked
+                            ? theme.cardChecked
+                            : theme.cardUnchecked;
 
                       const isEditingNote = editingNoteIndex === idx;
                       const isEditingPrice = editingPriceIndex === idx;
@@ -1546,12 +1742,33 @@ ALTER TABLE public.tracker_days DISABLE ROW LEVEL SECURITY;`}
                                 )}
                               </div>
                             ) : (
-                              <button
-                                onClick={() => handleToggleDay(idx)}
-                                className="w-7 h-7 rounded-lg border border-border/80 text-transparent hover:border-primary/50 hover:bg-primary/5 bg-background/20 transition-all flex items-center justify-center"
-                              >
-                                <Check className="w-4 h-4 text-transparent hover:text-muted-foreground/30 stroke-[3]" />
-                              </button>
+                              <div className="relative">
+                                <button
+                                  onClick={() => setShowEmojiPickerForDay(showEmojiPickerForDay === idx ? null : idx)}
+                                  className="w-7 h-7 rounded-lg border border-border/80 text-transparent hover:border-primary/50 hover:bg-primary/5 bg-background/20 transition-all flex items-center justify-center"
+                                  title="Select Emoji Status"
+                                >
+                                  <Check className="w-4 h-4 text-transparent hover:text-muted-foreground/35 stroke-[3]" />
+                                </button>
+
+                                {/* Inline Emoji Selector Popup when unchecked */}
+                                {showEmojiPickerForDay === idx && (
+                                  <div className="absolute left-1/2 -translate-x-1/2 bottom-8 z-30 bg-card border border-border p-1.5 rounded-lg shadow-xl grid grid-cols-3 gap-1.5 w-24 animate-fade-scale-in">
+                                    {POPULAR_EMOJIS.map((emoji) => (
+                                      <button
+                                        key={emoji}
+                                        onClick={() => {
+                                          handleToggleDay(idx, emoji);
+                                          setShowEmojiPickerForDay(null);
+                                        }}
+                                        className="text-sm p-1 hover:bg-accent rounded active:scale-95 transition-all text-center select-none text-foreground"
+                                      >
+                                        {emoji}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
                             )}
                           </div>
 

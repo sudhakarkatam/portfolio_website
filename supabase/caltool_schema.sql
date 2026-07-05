@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS public.tracker_categories (
     principal NUMERIC NOT NULL DEFAULT 100,
     rate NUMERIC NOT NULL DEFAULT 25,
     position INT NOT NULL DEFAULT 0, -- Preserves custom drag-and-drop ordering
+    is_paused BOOLEAN NOT NULL DEFAULT false, -- Allows pausing tracker categories
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -57,3 +58,20 @@ ON CONFLICT (category_id) DO NOTHING;
 INSERT INTO public.tracker_notes (id, content) VALUES
 ('00000000-0000-0000-0000-000000000000', '')
 ON CONFLICT (id) DO NOTHING;
+
+-- 4. Dedicated History Logs Table
+CREATE TABLE IF NOT EXISTS public.tracker_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    category_id VARCHAR(50) NOT NULL,
+    category_name VARCHAR(100) NOT NULL,
+    day_index INT NOT NULL CHECK (day_index >= 1 AND day_index <= 30),
+    checked BOOLEAN NOT NULL DEFAULT false,
+    emoji VARCHAR(10) NOT NULL DEFAULT '✅',
+    note TEXT DEFAULT '',
+    price NUMERIC,
+    logged_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Disable Row Level Security (RLS) to support public read/write without login requirements
+ALTER TABLE public.tracker_logs DISABLE ROW LEVEL SECURITY;
+
