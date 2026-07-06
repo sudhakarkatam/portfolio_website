@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Trash2, RotateCcw, Check, Plus, Edit2, Calculator, Sparkles, Cloud, CloudOff } from "lucide-react";
+import { ArrowLeft, Trash2, RotateCcw, Check, Plus, Edit2, Calculator, Sparkles, Cloud, CloudOff, Menu, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 interface DayData {
@@ -30,6 +30,7 @@ interface LogData {
   emoji: string;
   note: string;
   price: string;
+  tag?: string;
   logged_at: string;
 }
 
@@ -98,6 +99,18 @@ interface ConfirmModalState {
   onConfirm: () => void;
 }
 
+interface CustomPromptModalState {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  placeholder?: string;
+  defaultValue?: string;
+  inputType?: string;
+  showNotesAndTags?: boolean;
+  onConfirm: (val: string, optionalNote: string, tag: "p" | "d" | "") => void;
+  onCancel: () => void;
+}
+
 // Safe price parser to prevent NaN database query exceptions
 const safeParseFloat = (val: string | number | null | undefined): number | null => {
   if (val === null || val === undefined) return null;
@@ -105,6 +118,13 @@ const safeParseFloat = (val: string | number | null | undefined): number | null 
   if (str === "") return null;
   const num = parseFloat(str);
   return isNaN(num) ? null : num;
+};
+
+// Helper to interpret compounding rate either as direct multiplier or percentage
+const getCompoundingMultiplier = (rate: number): number => {
+  if (rate <= 0) return 1;
+  if (rate <= 10) return rate; // Treat as direct multiplier (e.g., 1.5 means 1.5x)
+  return 1 + rate / 100;       // Treat as percentage (e.g., 50 means 1 + 50/100 = 1.5x)
 };
 
 const CalTool: React.FC = () => {
@@ -130,6 +150,30 @@ const CalTool: React.FC = () => {
     onConfirm: () => {}
   });
 
+  // Custom Prompt Modal State
+  const [promptModal, setPromptModal] = useState<CustomPromptModalState>({
+    isOpen: false,
+    title: "",
+    message: "",
+    placeholder: "",
+    defaultValue: "",
+    inputType: "text",
+    showNotesAndTags: false,
+    onConfirm: () => {},
+    onCancel: () => {}
+  });
+
+  const [promptInputVal, setPromptInputVal] = useState<string>("");
+  const [promptNoteVal, setPromptNoteVal] = useState<string>("");
+  const [promptTagVal, setPromptTagVal] = useState<"p" | "d" | "">("");
+
+  // History sub-tab and tag filter states
+  const [historySubTab, setHistorySubTab] = useState<"capital" | "activity">("activity");
+  const [historyTagFilter, setHistoryTagFilter] = useState<"all" | "p" | "d">("all");
+
+  // Mobile drawer overlay state
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+
   // Track active inputs
   const [editingNoteIndex, setEditingNoteIndex] = useState<number | null>(null);
   const [editingPriceIndex, setEditingPriceIndex] = useState<number | null>(null);
@@ -150,6 +194,7 @@ const CalTool: React.FC = () => {
   const [isHistoryActive, setIsHistoryActive] = useState<boolean>(false);
   const [historyFilter, setHistoryFilter] = useState<"all" | "checked" | "pending" | "notes" | "prices">("all");
   const [historyCategoryFilter, setHistoryCategoryFilter] = useState<string>("all");
+  const [historyTimeframe, setHistoryTimeframe] = useState<"all" | "week" | "month">("all");
 
   // Load tracker state directly from database on mount (no admin login required)
   useEffect(() => {
@@ -372,6 +417,39 @@ const CalTool: React.FC = () => {
     });
   };
 
+  // Helper trigger for custom prompt modals
+  const triggerPrompt = (
+    title: string,
+    message: string,
+    onConfirm: (val: string, optionalNote: string, tag: "p" | "d" | "") => void,
+    options?: {
+      placeholder?: string;
+      defaultValue?: string;
+      inputType?: string;
+      showNotesAndTags?: boolean;
+    }
+  ) => {
+    setPromptInputVal(options?.defaultValue || "");
+    setPromptNoteVal("");
+    setPromptTagVal("");
+    setPromptModal({
+      isOpen: true,
+      title,
+      message,
+      placeholder: options?.placeholder || "",
+      defaultValue: options?.defaultValue || "",
+      inputType: options?.inputType || "text",
+      showNotesAndTags: options?.showNotesAndTags || false,
+      onConfirm: (val, note, tag) => {
+        onConfirm(val, note, tag);
+        setPromptModal((prev) => ({ ...prev, isOpen: false }));
+      },
+      onCancel: () => {
+        setPromptModal((prev) => ({ ...prev, isOpen: false }));
+      }
+    });
+  };
+
   // Generate completely empty days for initial state
   function generateDefaultDays(): DayData[] {
     return Array.from({ length: 30 }, () => ({
@@ -443,6 +521,7 @@ CREATE TABLE IF NOT EXISTS public.tracker_logs (
     emoji VARCHAR(10) NOT NULL DEFAULT '✅',
     note TEXT DEFAULT '',
     price NUMERIC,
+    tag VARCHAR(10) DEFAULT '',
     logged_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -815,6 +894,233 @@ ALTER TABLE public.tracker_logs DISABLE ROW LEVEL SECURITY;`}
     );
   };
 
+  // Compound subsequent days starting from a custom day milestone price
+  const handleCompoundFromDay = async (dayIdx: number) => {
+    if (!activeCategory) return;
+    if (dayIdx >= 29) {
+      triggerConfirm("Compounding Boundary", "This is the last block. There is no next block to compound to.", () => {}, "OK");
+      return;
+    }
+
+    const basePriceStr = activeCategory.days[dayIdx].price;
+    const basePrice = parseFloat(basePriceStr);
+    if (isNaN(basePrice)) {
+      triggerConfirm("Milestone Price Required", "Please enter a valid price on this block first.", () => {}, "OK");
+      return;
+    }
+
+    triggerPrompt(
+      `Compound Day ${dayIdx + 2}`,
+      `Compound Day ${dayIdx + 2} from Day ${dayIdx + 1} (₹${basePrice}). Enter rate/multiplier (e.g. 1.5 for 1.5x, or 50 for 50%):`,
+      async (input) => {
+        const rateVal = parseFloat(input);
+        if (isNaN(rateVal)) {
+          triggerConfirm("Invalid Rate", "Please enter a valid compounding rate.", () => {}, "OK");
+          return;
+        }
+
+        const multiplier = rateVal <= 10 ? rateVal : (1 + rateVal / 100);
+        const nextIdx = dayIdx + 1;
+        const compoundedVal = basePrice * multiplier;
+        const compoundedValStr = compoundedVal.toFixed(2);
+
+        setDbStatus("syncing");
+        try {
+          const updatedDaysLocal = [...activeCategory.days];
+          updatedDaysLocal[nextIdx] = {
+            ...updatedDaysLocal[nextIdx],
+            price: compoundedValStr,
+            updatedAt: new Date().toISOString()
+          };
+
+          // Update local state
+          setCategories((prev) =>
+            prev.map((cat) => {
+              if (cat.id !== activeCategoryId) return cat;
+              return { ...cat, days: updatedDaysLocal };
+            })
+          );
+
+          // Perform single next day database upsert
+          const { error } = await supabase
+            .from("tracker_days")
+            .upsert(
+              {
+                category_uuid: activeCategory.uuid,
+                day_index: nextIdx + 1,
+                checked: updatedDaysLocal[nextIdx].checked,
+                emoji: updatedDaysLocal[nextIdx].emoji,
+                note: updatedDaysLocal[nextIdx].note,
+                price: compoundedVal,
+                updated_at: new Date().toISOString()
+              },
+              { onConflict: "category_uuid,day_index" }
+            );
+
+          if (error) {
+            console.error("Error compounding next day in database:", error);
+            setDbStatus("error");
+          } else {
+            setDbStatus("synced");
+
+            // Log compound action once in history logs
+            const rateLabel = rateVal <= 10 ? `${rateVal}x` : `${rateVal}%`;
+            await supabase
+              .from("tracker_logs")
+              .insert({
+                category_id: activeCategory.id,
+                category_name: activeCategory.name,
+                day_index: nextIdx + 1,
+                checked: true,
+                emoji: "📈",
+                note: `Compounded Day ${nextIdx + 1} (₹${compoundedValStr}) from Day ${dayIdx + 1} at rate ${rateLabel}`,
+                price: compoundedVal,
+                logged_at: new Date().toISOString()
+              });
+
+            // Load logs again to refresh the logs view
+            const { data: logsData } = await supabase
+              .from("tracker_logs")
+              .select("*")
+              .order("logged_at", { ascending: false });
+
+            if (logsData) {
+              const formattedLogs: LogData[] = logsData.map((l) => ({
+                id: l.id,
+                category_id: l.category_id,
+                category_name: l.category_name,
+                day_index: l.day_index,
+                checked: l.checked,
+                emoji: l.emoji || "✅",
+                note: l.note || "",
+                price: (l.price !== null && l.price !== undefined) ? String(l.price) : "",
+                tag: l.tag || "",
+                logged_at: l.logged_at
+              }));
+              setDbLogs(formattedLogs);
+            }
+          }
+        } catch (err) {
+          console.error("Exception compounding days:", err);
+          setDbStatus("error");
+        }
+      },
+      { placeholder: "1.5" }
+    );
+  };
+
+  // Load capital (Deposit)
+  const handleLoadCapital = async () => {
+    triggerPrompt(
+      "Load Capital (Universal Deposit)",
+      "Enter deposit amount for the global wallet:",
+      async (amountInput, optionalNote, tag) => {
+        const amount = parseFloat(amountInput);
+        if (isNaN(amount) || amount <= 0) {
+          triggerConfirm("Invalid Amount", "Please enter a valid positive deposit amount.", () => {}, "OK");
+          return;
+        }
+
+        setDbStatus("syncing");
+        const depositNote = optionalNote.trim() || "Universal deposit loaded into Global Wallet";
+        const { data: newLog, error: logError } = await supabase
+          .from("tracker_logs")
+          .insert({
+            category_id: "global",
+            category_name: "Global Wallet",
+            day_index: 1, // Default placeholder day for non-day specific operations
+            checked: true,
+            emoji: "📥",
+            note: depositNote,
+            price: amount,
+            tag: tag,
+            logged_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+
+        if (logError) {
+          console.error("Error logging deposit:", logError);
+          setDbStatus("error");
+        } else {
+          setDbStatus("synced");
+          if (newLog) {
+            const formattedLog: LogData = {
+              id: newLog.id,
+              category_id: newLog.category_id,
+              category_name: newLog.category_name,
+              day_index: newLog.day_index,
+              checked: newLog.checked,
+              emoji: newLog.emoji || "📥",
+              note: newLog.note || "",
+              price: String(newLog.price),
+              tag: newLog.tag || "",
+              logged_at: newLog.logged_at
+            };
+            setDbLogs((prev) => [formattedLog, ...prev]);
+          }
+        }
+      },
+      { placeholder: "1000", showNotesAndTags: true }
+    );
+  };
+
+  // Release capital (Withdraw)
+  const handleReleaseCapital = async () => {
+    triggerPrompt(
+      "Release Capital (Universal Withdrawal)",
+      "Enter withdrawal amount for the global wallet:",
+      async (amountInput, optionalNote, tag) => {
+        const amount = parseFloat(amountInput);
+        if (isNaN(amount) || amount <= 0) {
+          triggerConfirm("Invalid Amount", "Please enter a valid positive withdrawal amount.", () => {}, "OK");
+          return;
+        }
+
+        setDbStatus("syncing");
+        const withdrawNote = optionalNote.trim() || "Universal withdrawal released from Global Wallet";
+        const { data: newLog, error: logError } = await supabase
+          .from("tracker_logs")
+          .insert({
+            category_id: "global",
+            category_name: "Global Wallet",
+            day_index: 1, // Default placeholder day
+            checked: true,
+            emoji: "📤",
+            note: withdrawNote,
+            price: amount,
+            tag: tag,
+            logged_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+
+        if (logError) {
+          console.error("Error logging withdrawal:", logError);
+          setDbStatus("error");
+        } else {
+          setDbStatus("synced");
+          if (newLog) {
+            const formattedLog: LogData = {
+              id: newLog.id,
+              category_id: newLog.category_id,
+              category_name: newLog.category_name,
+              day_index: newLog.day_index,
+              checked: newLog.checked,
+              emoji: newLog.emoji || "📤",
+              note: newLog.note || "",
+              price: String(newLog.price),
+              tag: newLog.tag || "",
+              logged_at: newLog.logged_at
+            };
+            setDbLogs((prev) => [formattedLog, ...prev]);
+          }
+        }
+      },
+      { placeholder: "200", showNotesAndTags: true }
+    );
+  };
+
   // Rename categories
   const handleStartRename = (catId: string, currentName: string) => {
     setIsEditingTabName(catId);
@@ -881,6 +1187,7 @@ ALTER TABLE public.tracker_logs DISABLE ROW LEVEL SECURITY;`}
       name: name.trim(),
       principal: "100",
       rate: "25",
+      isPaused: false,
       days: generateDefaultDays()
     };
 
@@ -954,27 +1261,59 @@ ALTER TABLE public.tracker_logs DISABLE ROW LEVEL SECURITY;`}
     );
   };
 
-  // Delete all history logs
+  // Delete history logs for selected category filter and active sub-tab
   const handleResetLogs = () => {
+    const isFiltered = historyCategoryFilter !== "all";
+    const filterLabel = isFiltered
+      ? (historyCategoryFilter === "global" ? "Global Wallet" : categories.find(c => c.id === historyCategoryFilter)?.name || historyCategoryFilter)
+      : "All Trackers";
+
+    const isCapital = historySubTab === "capital";
+    const subTabLabel = isCapital ? "Capital Logs" : "Activity Logs";
+
     triggerConfirm(
-      "Clear All History Logs",
-      "Are you sure you want to permanently clear all activity history logs from Supabase? This action is irreversible.",
+      `Clear ${subTabLabel} for ${filterLabel}`,
+      `Are you sure you want to permanently clear the ${subTabLabel.toLowerCase()} for "${filterLabel}" from Supabase? This action is irreversible and will not affect other log types.`,
       async () => {
         setDbStatus("syncing");
-        const { error } = await supabase
-          .from("tracker_logs")
-          .delete()
-          .neq("category_id", "force_non_empty_delete");
+        let query = supabase.from("tracker_logs").delete();
+        
+        // Filter by category if one is active
+        if (isFiltered) {
+          query = query.eq("category_id", historyCategoryFilter);
+        } else {
+          query = query.neq("category_id", "force_non_empty_delete");
+        }
+
+        // Filter by sub-tab type (Capital deposits/withdrawals vs Activity milestones)
+        if (isCapital) {
+          query = query.in("emoji", ["📥", "📤"]);
+        } else {
+          query = query.neq("emoji", "📥").neq("emoji", "📤");
+        }
+
+        const { error } = await query;
 
         if (error) {
           console.error("Error resetting history logs in Supabase:", error);
           setDbStatus("error");
         } else {
-          setDbLogs([]);
+          // Keep logs that do not match both the deleted category and active sub-tab filter
+          setDbLogs((prev) => 
+            prev.filter((log) => {
+              const matchesCategory = isFiltered ? log.category_id === historyCategoryFilter : true;
+              const matchesType = isCapital ? (log.emoji === "📥" || log.emoji === "📤") : (log.emoji !== "📥" && log.emoji !== "📤");
+              
+              if (matchesCategory && matchesType) {
+                return false; // This log was deleted, discard it
+              }
+              return true; // Keep this log
+            })
+          );
           setDbStatus("synced");
         }
       },
-      "Clear All"
+      "Clear"
     );
   };
 
@@ -1064,6 +1403,197 @@ ALTER TABLE public.tracker_logs DISABLE ROW LEVEL SECURITY;`}
         </div>
       )}
 
+      {/* Custom Prompt Modal Overlay */}
+      {promptModal.isOpen && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-card border border-border/80 rounded-2xl max-w-md w-full p-6 shadow-2xl animate-fade-scale-in relative flex flex-col gap-4">
+            <div>
+              <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                <span>💬</span> {promptModal.title}
+              </h3>
+              <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
+                {promptModal.message}
+              </p>
+            </div>
+
+            {/* Input Value */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Amount / Rate</label>
+              <input
+                type={promptModal.inputType || "text"}
+                value={promptInputVal}
+                onChange={(e) => setPromptInputVal(e.target.value)}
+                placeholder={promptModal.placeholder || "Enter value..."}
+                className="bg-background border border-border/80 rounded-lg px-3 py-2 text-sm outline-none focus:border-primary/50 text-foreground w-full font-semibold"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !promptModal.showNotesAndTags) {
+                    promptModal.onConfirm(promptInputVal, promptNoteVal, promptTagVal);
+                  }
+                }}
+              />
+            </div>
+
+            {/* Optional Notes and Tags for Load/Release */}
+            {promptModal.showNotesAndTags && (
+              <>
+                {/* Optional Tag Selector */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Assign Tag (Select One)</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { key: "p", label: "P Tag (Personal)", color: "border-cyan-500/20 bg-cyan-500/10 text-cyan-400" },
+                      { key: "d", label: "D Tag (Professional)", color: "border-amber-500/20 bg-amber-500/10 text-amber-400" },
+                      { key: "", label: "No Tag", color: "border-border/80 bg-background/50 text-muted-foreground" }
+                    ].map((tagOpt) => {
+                      const isSelected = promptTagVal === tagOpt.key;
+                      return (
+                        <button
+                          key={tagOpt.key}
+                          type="button"
+                          onClick={() => setPromptTagVal(tagOpt.key as any)}
+                          className={`px-2.5 py-1.5 rounded-lg border text-[10px] font-bold transition-all text-center ${
+                            isSelected
+                              ? `${tagOpt.color} border-primary scale-[1.03] ring-1 ring-primary`
+                              : "border-border/60 hover:bg-accent/40 text-muted-foreground"
+                          }`}
+                        >
+                          {tagOpt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Optional Note Text area */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Optional Note</label>
+                  <textarea
+                    value={promptNoteVal}
+                    onChange={(e) => setPromptNoteVal(e.target.value)}
+                    placeholder="Describe this transaction..."
+                    rows={2}
+                    className="bg-background border border-border/80 rounded-lg px-3 py-2 text-xs outline-none focus:border-primary/50 text-foreground w-full resize-none leading-normal"
+                  />
+                </div>
+              </>
+            )}
+
+            <div className="flex justify-end gap-3 mt-2">
+              <button
+                onClick={promptModal.onCancel}
+                className="px-3.5 py-1.5 rounded-lg border border-border bg-card hover:bg-accent text-xs font-semibold transition-colors text-foreground"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => promptModal.onConfirm(promptInputVal, promptNoteVal, promptTagVal)}
+                className="px-4 py-1.5 rounded-lg bg-primary hover:bg-primary/95 text-white text-xs font-semibold shadow-md shadow-primary/10 transition-colors"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Drawer Overlay */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 md:hidden flex justify-end animate-fade-in" onClick={() => setIsMobileMenuOpen(false)}>
+          <div 
+            className="w-72 bg-card border-l border-border/80 h-full p-6 flex flex-col gap-6 shadow-2xl animate-fade-scale-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Drawer Header */}
+            <div className="flex items-center justify-between border-b border-border/40 pb-4">
+              <span className="text-sm font-black text-foreground flex items-center gap-1.5">
+                ⚙️ Quick Actions
+              </span>
+              <button 
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="p-1.5 rounded-lg border border-border bg-background hover:bg-accent text-foreground transition-all"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Navigation & Panels Toggle */}
+            <div className="flex flex-col gap-2.5">
+              <span className="text-[10px] text-muted-foreground uppercase font-black tracking-wider px-1">
+                Utility Views
+              </span>
+              <button
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  setIsNotepadActive(true);
+                  setIsHistoryActive(false);
+                  setShowCalculatedTargets(false);
+                }}
+                className={`flex items-center gap-2.5 text-xs font-bold py-3 px-4 rounded-xl border transition-all text-left ${
+                  isNotepadActive
+                    ? "bg-primary text-primary-foreground border-transparent shadow-md"
+                    : "bg-card/40 border-border hover:bg-accent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <span>📓</span> Global Notepad
+              </button>
+              <button
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  setIsHistoryActive(true);
+                  setIsNotepadActive(false);
+                  setShowCalculatedTargets(false);
+                }}
+                className={`flex items-center gap-2.5 text-xs font-bold py-3 px-4 rounded-xl border transition-all text-left ${
+                  isHistoryActive
+                    ? "bg-primary text-primary-foreground border-transparent shadow-md"
+                    : "bg-card/40 border-border hover:bg-accent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <span>📜</span> View Logs & P&L History
+              </button>
+              <button
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  setIsNotepadActive(false);
+                  setIsHistoryActive(false);
+                  setShowCalculatedTargets(false);
+                }}
+                className={`flex items-center gap-2.5 text-xs font-bold py-3 px-4 rounded-xl border transition-all text-left ${
+                  !isNotepadActive && !isHistoryActive
+                    ? "bg-primary text-primary-foreground border-transparent shadow-md"
+                    : "bg-card/40 border-border hover:bg-accent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <span>🎯</span> Milestone Day Grid
+              </button>
+            </div>
+
+            {/* Category / Tracker Management Actions */}
+            <div className="flex flex-col gap-2.5 mt-auto border-t border-border/40 pt-4">
+              <button
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  handleAddCategory();
+                }}
+                className="flex items-center justify-center gap-1.5 text-xs font-bold py-3 px-4 rounded-xl border border-dashed border-border hover:border-primary/50 text-muted-foreground hover:text-primary transition-all w-full"
+              >
+                <Plus className="w-4 h-4" /> Add Tracker Tab
+              </button>
+              <button
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  handleResetAllData();
+                }}
+                className="flex items-center justify-center gap-1.5 text-xs font-bold py-3 px-4 rounded-xl border border-destructive/20 text-destructive hover:bg-destructive/10 transition-all w-full"
+              >
+                <Trash2 className="w-4 h-4" /> Reset All System
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-[1400px] mx-auto p-4 md:p-6 flex flex-col gap-6">
         
         {/* Simple Top Header */}
@@ -1093,13 +1623,20 @@ ALTER TABLE public.tracker_logs DISABLE ROW LEVEL SECURITY;`}
               )}
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button
               onClick={handleResetAllData}
-              className="flex items-center gap-1 text-xs border border-destructive/20 px-3 py-1.5 rounded-lg hover:bg-destructive/10 text-destructive transition-colors"
+              className="hidden md:flex items-center gap-1 text-xs border border-destructive/20 px-3 py-1.5 rounded-lg hover:bg-destructive/10 text-destructive transition-colors"
             >
               <Trash2 className="w-3.5 h-3.5" />
               Reset All
+            </button>
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="md:hidden flex items-center justify-center p-2 rounded-lg border border-border bg-card hover:bg-accent text-foreground transition-all shrink-0 animate-fade-in"
+              title="Open Actions Menu"
+            >
+              <Menu className="w-4 h-4" />
             </button>
           </div>
         </header>
@@ -1108,171 +1645,173 @@ ALTER TABLE public.tracker_logs DISABLE ROW LEVEL SECURITY;`}
         <div className="flex flex-col md:flex-row gap-6 items-start">
           
           {/* Sidebar Tab Selectors */}
-          <aside className="w-full md:w-48 shrink-0 bg-card/10 p-3 rounded-xl border border-border/20">
-            <span className="text-[10px] text-muted-foreground uppercase font-black tracking-wider px-2 mb-1 md:block hidden">
-              Select Tracker
-            </span>
-            <div className="flex flex-row md:flex-col gap-1.5 overflow-x-auto md:overflow-x-visible pb-1 md:pb-0 items-center md:items-stretch scrollbar-none w-full min-w-0">
-              {categories.map((cat, idx) => {
-                const isActive = cat.id === activeCategoryId && !isNotepadActive && !isHistoryActive;
-                const isEditing = isEditingTabName === cat.id;
-                const isManageable = true; // Make all categories editable and deletable
-                const hasPending = cat.days.some((d) => d.checked && d.emoji === "❓");
-                const hasRecentProgress = cat.days.some((d) => {
-                  if (!d.checked || (d.emoji !== "✅" && d.emoji !== "💯")) return false;
-                  if (!d.updatedAt) return false;
-                  const updatedTime = new Date(d.updatedAt).getTime();
-                  const twoDaysAgo = Date.now() - 2 * 24 * 60 * 60 * 1000;
-                  return updatedTime > twoDaysAgo;
-                });
+          <aside className="w-full md:w-48 shrink-0 bg-card/10 p-3 rounded-xl border border-border/20 flex flex-col gap-3">
+            <div className="w-full min-w-0">
+              <span className="text-[10px] text-muted-foreground uppercase font-black tracking-wider px-2 mb-1 md:block hidden">
+                Select Tracker
+              </span>
+              <div className="flex flex-row md:flex-col gap-1.5 overflow-x-auto md:overflow-x-visible pb-1 md:pb-0 items-center md:items-stretch scrollbar-none w-full min-w-0">
+                {categories.map((cat, idx) => {
+                  const isActive = cat.id === activeCategoryId && !isNotepadActive && !isHistoryActive;
+                  const isEditing = isEditingTabName === cat.id;
+                  const isManageable = true; // Make all categories editable and deletable
+                  const hasPending = cat.days.some((d) => d.checked && d.emoji === "❓");
+                  const hasRecentProgress = cat.days.some((d) => {
+                    if (!d.checked || (d.emoji !== "✅" && d.emoji !== "💯")) return false;
+                    if (!d.updatedAt) return false;
+                    const updatedTime = new Date(d.updatedAt).getTime();
+                    const twoDaysAgo = Date.now() - 2 * 24 * 60 * 60 * 1000;
+                    return updatedTime > twoDaysAgo;
+                  });
 
-                return (
-                  <div
-                    key={cat.id}
-                    draggable={!isEditing}
-                    onDragStart={(e) => handleDragStart(e, idx)}
-                    onDragOver={(e) => handleDragOver(e, idx)}
-                    onDragEnd={handleDragEnd}
-                    className={`relative flex items-center w-auto md:w-full cursor-grab active:cursor-grabbing transition-all shrink-0 ${
-                      draggedCatIndex === idx ? "opacity-35 scale-95 border-primary/20" : ""
-                    }`}
-                  >
-                    {isEditing ? (
-                      <div className="flex items-center bg-card border border-primary/50 rounded-lg px-2.5 py-1.5 w-full">
-                        <input
-                          type="text"
-                          value={editTabNameVal}
-                          onChange={(e) => setEditTabNameVal(e.target.value)}
-                          onBlur={() => handleSaveRename(cat.id)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") handleSaveRename(cat.id);
-                            if (e.key === "Escape") setIsEditingTabName(null);
-                          }}
-                          className="bg-transparent border-none text-xs outline-none w-full text-foreground font-semibold"
-                          autoFocus
-                        />
-                      </div>
-                    ) : (
-                      <div className="flex items-center group relative w-full">
-                        <div
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => {
-                            setActiveCategoryId(cat.id);
-                            setIsNotepadActive(false);
-                            setIsHistoryActive(false);
-                            setShowCalculatedTargets(false); // Reset targets view on tab switch
-                            setEditingNoteIndex(null);
-                            setEditingPriceIndex(null);
-                          }}
-                          onDoubleClick={() => handleTogglePauseCategory(cat.id, cat.isPaused)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
+                  return (
+                    <div
+                      key={cat.id}
+                      draggable={!isEditing}
+                      onDragStart={(e) => handleDragStart(e, idx)}
+                      onDragOver={(e) => handleDragOver(e, idx)}
+                      onDragEnd={handleDragEnd}
+                      className={`relative flex items-center w-auto md:w-full cursor-grab active:cursor-grabbing transition-all shrink-0 ${
+                        draggedCatIndex === idx ? "opacity-35 scale-95 border-primary/20" : ""
+                      }`}
+                    >
+                      {isEditing ? (
+                        <div className="flex items-center bg-card border border-primary/50 rounded-lg px-2.5 py-1.5 w-full">
+                          <input
+                            type="text"
+                            value={editTabNameVal}
+                            onChange={(e) => setEditTabNameVal(e.target.value)}
+                            onBlur={() => handleSaveRename(cat.id)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleSaveRename(cat.id);
+                              if (e.key === "Escape") setIsEditingTabName(null);
+                            }}
+                            className="bg-transparent border-none text-xs outline-none w-full text-foreground font-semibold"
+                            autoFocus
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex items-center group relative w-full">
+                          <div
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => {
                               setActiveCategoryId(cat.id);
                               setIsNotepadActive(false);
                               setIsHistoryActive(false);
-                              setShowCalculatedTargets(false);
+                              setShowCalculatedTargets(false); // Reset targets view on tab switch
                               setEditingNoteIndex(null);
                               setEditingPriceIndex(null);
-                            }
-                          }}
-                          title="Double-click to Pause / Resume tracker"
-                          className={`text-xs font-semibold px-3 py-2.5 rounded-lg border w-full text-left flex justify-between items-center transition-all cursor-pointer ${
-                            cat.isPaused
-                              ? "bg-zinc-800/10 text-zinc-500 border-zinc-800/25 grayscale blur-[0.6px] opacity-40 hover:opacity-60"
-                              : isActive
-                                ? hasPending
-                                  ? "bg-amber-500 text-zinc-950 border-transparent shadow-sm font-bold"
-                                  : hasRecentProgress
-                                    ? "bg-emerald-600 text-white border-transparent shadow-sm font-bold"
-                                    : "bg-primary text-primary-foreground border-transparent shadow-sm"
-                                : hasPending
-                                  ? "bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20 hover:text-amber-300"
-                                  : hasRecentProgress
-                                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20 hover:text-emerald-300"
-                                    : "bg-card/30 text-muted-foreground border-border/30 hover:bg-card/50 hover:text-foreground"
-                          }`}
-                        >
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            {/* Visual Grip Handle for dragging */}
-                            <span className="text-muted-foreground/35 group-hover:text-muted-foreground/60 transition-colors text-xs select-none">
-                              ⋮⋮
-                            </span>
-                            <span className="capitalize truncate max-w-[80px]">{cat.name}</span>
-                            {cat.isPaused && (
-                              <span className="text-[7px] font-bold text-zinc-500 bg-zinc-800/30 border border-zinc-700/30 px-1 rounded uppercase tracking-wider shrink-0 select-none ml-1.5">
-                                paused
+                            }}
+                            onDoubleClick={() => handleTogglePauseCategory(cat.id, cat.isPaused)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                setActiveCategoryId(cat.id);
+                                setIsNotepadActive(false);
+                                setIsHistoryActive(false);
+                                setShowCalculatedTargets(false);
+                                setEditingNoteIndex(null);
+                                setEditingPriceIndex(null);
+                              }
+                            }}
+                            title="Double-click to Pause / Resume tracker"
+                            className={`text-xs font-semibold px-3 py-2.5 rounded-lg border w-full text-left flex justify-between items-center transition-all cursor-pointer ${
+                              cat.isPaused
+                                ? "bg-zinc-800/10 text-zinc-500 border-zinc-800/25 grayscale blur-[0.6px] opacity-40 hover:opacity-60"
+                                : isActive
+                                  ? hasPending
+                                    ? "bg-amber-500 text-zinc-950 border-transparent shadow-sm font-bold"
+                                    : hasRecentProgress
+                                      ? "bg-emerald-600 text-white border-transparent shadow-sm font-bold"
+                                      : "bg-primary text-primary-foreground border-transparent shadow-sm"
+                                  : hasPending
+                                    ? "bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20 hover:text-amber-300"
+                                    : hasRecentProgress
+                                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20 hover:text-emerald-300"
+                                      : "bg-card/30 text-muted-foreground border-border/30 hover:bg-card/50 hover:text-foreground"
+                            }`}
+                          >
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              {/* Visual Grip Handle for dragging */}
+                              <span className="text-muted-foreground/35 group-hover:text-muted-foreground/60 transition-colors text-xs select-none">
+                                ⋮⋮
                               </span>
-                            )}
-                            {(() => {
-                              const completedDays = cat.days
-                                .map((day, idx) => ({ ...day, dayIndex: idx + 1 }))
-                                .filter((d) => d.checked);
-                              const maxCompletedDay = completedDays.length > 0
-                                ? Math.max(...completedDays.map((d) => d.dayIndex))
-                                : 0;
-                              const topDay = cat.days[maxCompletedDay - 1];
-                              const isTopDayPending = topDay && topDay.checked && topDay.emoji === "❓";
-
-                              const badgeClass = cat.isPaused
-                                ? "bg-zinc-800/50 text-zinc-500 border border-zinc-700/20"
-                                : isTopDayPending
-                                  ? "bg-red-600 text-white font-black border border-red-700/30 shadow-[0_0_8px_rgba(220,38,38,0.25)] animate-pulse"
-                                  : isActive
-                                    ? "bg-white/20 text-white"
-                                    : "bg-primary/10 text-primary border border-primary/20";
-
-                              return (
-                                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md shrink-0 ml-1.5 ${badgeClass}`}>
-                                  {maxCompletedDay}
+                              <span className="capitalize truncate max-w-[80px]">{cat.name}</span>
+                              {cat.isPaused && (
+                                <span className="text-[7px] font-bold text-zinc-500 bg-zinc-800/30 border border-zinc-700/30 px-1 rounded uppercase tracking-wider shrink-0 select-none ml-1.5">
+                                  paused
                                 </span>
-                              );
-                            })()}
-                          </div>
-                          
-                          {isManageable && (
-                            <div className="flex items-center gap-1 opacity-70 md:opacity-0 md:group-hover:opacity-100 transition-opacity ml-2">
-                              <span
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleStartRename(cat.id, cat.name);
-                                }}
-                                className="hover:scale-105 p-0.5 rounded text-muted-foreground hover:text-foreground"
-                                title="Rename"
-                              >
-                                <Edit2 className="w-3 h-3" />
-                              </span>
-                              <span
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteCategory(cat.id, cat.name);
-                                }}
-                                className="hover:scale-105 p-0.5 rounded text-muted-foreground hover:text-destructive"
-                                title="Delete"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                              )}
+                              {(() => {
+                                const completedDays = cat.days
+                                  .map((day, idx) => ({ ...day, dayIndex: idx + 1 }))
+                                  .filter((d) => d.checked);
+                                const maxCompletedDay = completedDays.length > 0
+                                  ? Math.max(...completedDays.map((d) => d.dayIndex))
+                                  : 0;
+                                const topDay = cat.days[maxCompletedDay - 1];
+                                const isTopDayPending = topDay && topDay.checked && topDay.emoji === "❓";
 
+                                const badgeClass = cat.isPaused
+                                  ? "bg-zinc-800/50 text-zinc-500 border border-zinc-700/20"
+                                  : isTopDayPending
+                                    ? "bg-red-600 text-white font-black border border-red-700/30 shadow-[0_0_8px_rgba(220,38,38,0.25)] animate-pulse"
+                                    : isActive
+                                      ? "bg-white/20 text-white"
+                                      : "bg-primary/10 text-primary border border-primary/20";
+
+                                return (
+                                  <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md shrink-0 ml-1.5 ${badgeClass}`}>
+                                    {maxCompletedDay}
+                                  </span>
+                                );
+                              })()}
+                            </div>
+                            
+                            {isManageable && (
+                              <div className="flex items-center gap-1 opacity-70 md:opacity-0 md:group-hover:opacity-100 transition-opacity ml-2">
+                                <span
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleStartRename(cat.id, cat.name);
+                                  }}
+                                  className="hover:scale-105 p-0.5 rounded text-muted-foreground hover:text-foreground"
+                                  title="Rename"
+                                >
+                                  <Edit2 className="w-3 h-3" />
+                                </span>
+                                <span
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteCategory(cat.id, cat.name);
+                                  }}
+                                  className="hover:scale-105 p-0.5 rounded text-muted-foreground hover:text-destructive"
+                                  title="Delete"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Action Bar (Hidden on Mobile, Desktop Side Selector) */}
+            <div className="hidden md:flex flex-col gap-1.5 border-t border-border/10 pt-3 w-full shrink-0">
               {/* Add Tracker Button */}
               <button
                 onClick={handleAddCategory}
-                className="text-[11px] font-semibold px-3 py-2 rounded-lg border border-dashed border-border hover:border-primary/50 hover:text-primary transition-all text-muted-foreground flex items-center justify-center gap-1.5 w-auto md:w-full mt-0 md:mt-2 shrink-0 h-[38px] md:h-auto"
+                className="text-[11px] font-semibold px-3 py-2 rounded-lg border border-dashed border-border hover:border-primary/50 hover:text-primary transition-all text-muted-foreground flex items-center justify-center gap-1.5 shrink-0 h-[38px] md:h-auto md:w-full"
               >
                 <Plus className="w-3.5 h-3.5" />
                 Add Tracker
               </button>
 
-              {/* Responsive Divider */}
-              <div className="border-l md:border-l-0 md:border-t border-border/20 h-6 md:h-0 my-0 md:my-2 mx-1.5 md:mx-0 pt-0 md:pt-2 shrink-0 self-center" />
-              
               {/* Notepad Button */}
               <button
                 onClick={() => {
@@ -1282,7 +1821,7 @@ ALTER TABLE public.tracker_logs DISABLE ROW LEVEL SECURITY;`}
                   setEditingNoteIndex(null);
                   setEditingPriceIndex(null);
                 }}
-                className={`text-xs font-semibold px-3 py-2.5 rounded-lg border w-auto md:w-full text-left flex items-center gap-2 transition-all shrink-0 ${
+                className={`text-xs font-semibold px-3 py-2.5 rounded-lg border w-auto md:w-full text-left flex items-center gap-2 transition-all shrink-0 h-[38px] md:h-auto ${
                   isNotepadActive
                     ? "bg-primary text-primary-foreground border-transparent shadow-sm"
                     : "bg-card/30 text-muted-foreground border-border/30 hover:bg-card/50 hover:text-foreground"
@@ -1301,7 +1840,7 @@ ALTER TABLE public.tracker_logs DISABLE ROW LEVEL SECURITY;`}
                   setEditingNoteIndex(null);
                   setEditingPriceIndex(null);
                 }}
-                className={`text-xs font-semibold px-3 py-2.5 rounded-lg border w-auto md:w-full text-left flex items-center gap-2 transition-all shrink-0 ${
+                className={`text-xs font-semibold px-3 py-2.5 rounded-lg border w-auto md:w-full text-left flex items-center gap-2 transition-all shrink-0 h-[38px] md:h-auto ${
                   isHistoryActive
                     ? "bg-primary text-primary-foreground border-transparent shadow-sm"
                     : "bg-card/30 text-muted-foreground border-border/30 hover:bg-card/50 hover:text-foreground"
@@ -1366,202 +1905,422 @@ ALTER TABLE public.tracker_logs DISABLE ROW LEVEL SECURITY;`}
               /* Dedicated History Panel */
               <section className="bg-card/30 border border-border/40 backdrop-blur-md rounded-xl p-6 shadow-sm w-full flex flex-col gap-6 min-h-[500px]">
                 {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-border/40 pb-4 gap-4">
+                <div className="flex items-center justify-between border-b border-border/40 pb-4">
                   <div className="flex items-center gap-2">
                     <span className="text-lg animate-pulse">📜</span>
                     <div>
                       <h2 className="text-sm font-bold text-foreground">Tracker History & Activity Logs</h2>
-                      <p className="text-[10px] text-muted-foreground">Detailed logs of checked days, custom prices, and notes categorized by category</p>
+                      <p className="text-[10px] text-muted-foreground">Manage your milestone checks, notes, and load/release capital operations</p>
                     </div>
                   </div>
-
-                  {/* Category & Status Filter Controls */}
-                  <div className="flex flex-wrap items-center gap-3">
-                    {/* Category Dropdown Selector */}
-                    <select
-                      value={historyCategoryFilter}
-                      onChange={(e) => setHistoryCategoryFilter(e.target.value)}
-                      className="bg-background border border-border/80 text-foreground text-[10px] font-semibold rounded-lg px-2.5 py-1.5 focus:border-primary/50 outline-none cursor-pointer shadow-sm capitalize"
-                    >
-                      <option value="all">All Trackers</option>
-                      {categories.map((cat) => (
-                        <option key={cat.id} value={cat.id}>
-                          {cat.name}
-                        </option>
-                      ))}
-                    </select>
-
-                    <div className="flex flex-wrap items-center gap-1.5 bg-background/50 border border-border/50 p-1 rounded-lg">
-                      {[
-                        { id: "all", label: "All Logs", icon: "📁" },
-                        { id: "checked", label: "Checked", icon: "✅" },
-                        { id: "pending", label: "Pending", icon: "❓" },
-                        { id: "notes", label: "With Notes", icon: "📝" },
-                        { id: "prices", label: "With Prices", icon: "💰" }
-                      ].map((btn) => (
-                        <button
-                          key={btn.id}
-                          onClick={() => setHistoryFilter(btn.id as any)}
-                          className={`text-[10px] px-2.5 py-1 rounded font-semibold transition-all flex items-center gap-1 ${
-                            historyFilter === btn.id
-                              ? "bg-primary text-primary-foreground shadow-sm"
-                              : "hover:bg-accent text-muted-foreground hover:text-foreground"
-                          }`}
-                        >
-                          <span>{btn.icon}</span>
-                          <span>{btn.label}</span>
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Clear Logs Button */}
-                    <button
-                      onClick={handleResetLogs}
-                      className="flex items-center gap-1.5 text-xs text-destructive border border-destructive/20 px-3 py-1.5 rounded-lg hover:bg-destructive/10 transition-colors"
-                      title="Clear all activity history logs"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      Clear Logs
-                    </button>
-                  </div>
+                  {/* Clear Logs Button */}
+                  <button
+                    onClick={handleResetLogs}
+                    className="flex items-center gap-1.5 text-xs text-destructive border border-destructive/20 px-3 py-1.5 rounded-lg hover:bg-destructive/10 transition-colors"
+                    title="Clear all activity history logs"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Clear Logs
+                  </button>
                 </div>
 
-                {/* History Content - Chronological Timeline Log */}
-                <div className="flex flex-col gap-6">
-                  {(() => {
-                    const recentLogs = [...dbLogs].filter((log) => {
-                      // Apply category filter selection
-                      if (historyCategoryFilter !== "all" && log.category_id !== historyCategoryFilter) {
-                        return false;
-                      }
-                      // Apply status filter selection
-                      if (historyFilter === "all") {
-                        return true;
-                      }
-                      if (historyFilter === "checked") {
-                        return log.checked && (log.emoji === "✅" || log.emoji === "💯");
-                      }
-                      if (historyFilter === "pending") {
-                        return log.checked && log.emoji === "❓";
-                      }
-                      if (historyFilter === "notes") {
-                        return log.note && log.note.trim() !== "";
-                      }
-                      if (historyFilter === "prices") {
-                        return log.price && log.price.trim() !== "";
-                      }
-                      return false;
-                    }).sort((a, b) => {
-                      const timeA = a.logged_at ? new Date(a.logged_at).getTime() : 0;
-                      const timeB = b.logged_at ? new Date(b.logged_at).getTime() : 0;
-                      return timeB - timeA; // Most recent first
-                    });
+                {/* Sub-Tabs Selector */}
+                <div className="flex border-b border-border/40 gap-4">
+                  <button
+                    onClick={() => setHistorySubTab("capital")}
+                    className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 ${
+                      historySubTab === "capital"
+                        ? "border-primary text-primary"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <span>📊</span> Capital Operations Logs
+                  </button>
+                  <button
+                    onClick={() => setHistorySubTab("activity")}
+                    className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 ${
+                      historySubTab === "activity"
+                        ? "border-primary text-primary"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <span>📝</span> Activity Timeline Logs
+                  </button>
+                </div>
 
-                    if (recentLogs.length === 0) {
+                {historySubTab === "capital" ? (
+                  <>
+                    {/* Filters Row */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 w-full border-b border-border/10 pb-3">
+                      <div className="flex flex-wrap items-center gap-3">
+                        {/* Category Filter */}
+                        <select
+                          value={historyCategoryFilter}
+                          onChange={(e) => setHistoryCategoryFilter(e.target.value)}
+                          className="bg-background border border-border/80 text-foreground text-[10px] font-semibold rounded-lg px-2.5 py-1.5 focus:border-primary/50 outline-none cursor-pointer shadow-sm capitalize"
+                        >
+                          <option value="all">All Trackers</option>
+                          <option value="global">Global Wallet</option>
+                          {categories.map((cat) => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.name}
+                            </option>
+                          ))}
+                        </select>
+
+                        {/* Timeframe Filter */}
+                        <select
+                          value={historyTimeframe}
+                          onChange={(e) => setHistoryTimeframe(e.target.value as any)}
+                          className="bg-background border border-border/80 text-foreground text-[10px] font-semibold rounded-lg px-2.5 py-1.5 focus:border-primary/50 outline-none cursor-pointer shadow-sm"
+                        >
+                          <option value="all">All Time</option>
+                          <option value="week">This Week</option>
+                          <option value="month">This Month</option>
+                        </select>
+
+                        {/* Tag Filter */}
+                        <select
+                          value={historyTagFilter}
+                          onChange={(e) => setHistoryTagFilter(e.target.value as any)}
+                          className="bg-background border border-border/80 text-foreground text-[10px] font-semibold rounded-lg px-2.5 py-1.5 focus:border-primary/50 outline-none cursor-pointer shadow-sm"
+                        >
+                          <option value="all">All Tags (P & D)</option>
+                          <option value="p">P Tag (Personal)</option>
+                          <option value="d">D Tag (Professional)</option>
+                        </select>
+                      </div>
+
+                      {/* Load & Release Actions */}
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={handleLoadCapital}
+                          className="flex items-center gap-1 text-[11px] font-bold px-3 py-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 shadow-sm transition-all duration-200"
+                          title="Universal capital deposit"
+                        >
+                          <span>📥</span> Load Capital
+                        </button>
+                        <button
+                          onClick={handleReleaseCapital}
+                          className="flex items-center gap-1 text-[11px] font-bold px-3 py-1.5 rounded-lg border border-rose-500/20 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 shadow-sm transition-all duration-200"
+                          title="Universal capital withdrawal"
+                        >
+                          <span>📤</span> Release Capital
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Capital Profit & Loss Banner */}
+                    {(() => {
+                      const filteredLogsForPL = dbLogs.filter((log) => {
+                        if (log.emoji !== "📥" && log.emoji !== "📤") return false;
+                        if (historyCategoryFilter !== "all" && log.category_id !== historyCategoryFilter) {
+                          return false;
+                        }
+                        if (historyTagFilter !== "all" && log.tag !== historyTagFilter) {
+                          return false;
+                        }
+                        if (historyTimeframe !== "all") {
+                          if (!log.logged_at) return false;
+                          const logTime = new Date(log.logged_at).getTime();
+                          const limit = historyTimeframe === "week" ? 7 * 24 * 60 * 60 * 1000 : 30 * 24 * 60 * 60 * 1000;
+                          if (Date.now() - logTime > limit) return false;
+                        }
+                        return true;
+                      });
+
+                      const totalDeposits = filteredLogsForPL
+                        .filter((l) => l.emoji === "📥")
+                        .reduce((acc, curr) => acc + (parseFloat(curr.price) || 0), 0);
+
+                      const totalWithdrawals = filteredLogsForPL
+                        .filter((l) => l.emoji === "📤")
+                        .reduce((acc, curr) => acc + (parseFloat(curr.price) || 0), 0);
+
+                      const netFlow = totalWithdrawals - totalDeposits;
+
                       return (
-                        <div className="flex flex-col items-center justify-center p-12 border border-dashed border-border/60 rounded-xl bg-background/20 text-center animate-fade-in">
-                          <span className="text-2xl mb-2">⏱️</span>
-                          <h4 className="text-xs font-semibold text-foreground mb-1">No Recent Logs Found</h4>
-                          <p className="text-[10px] text-muted-foreground max-w-xs leading-relaxed">
-                            No logs match the current filter selection or no actions have been taken on your trackers yet.
-                          </p>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+                          <div className="bg-card/45 border border-border/30 rounded-xl p-4 shadow-sm flex flex-col gap-1 text-left">
+                            <span className="text-[10px] text-muted-foreground font-black uppercase tracking-wider flex items-center gap-1">
+                              <span>📥</span> Deposits (Loaded)
+                            </span>
+                            <span className="text-base font-black text-foreground">
+                              ₹{totalDeposits.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          </div>
+
+                          <div className="bg-card/45 border border-border/30 rounded-xl p-4 shadow-sm flex flex-col gap-1 text-left">
+                            <span className="text-[10px] text-muted-foreground font-black uppercase tracking-wider flex items-center gap-1">
+                              <span>📤</span> Withdrawals (Released)
+                            </span>
+                            <span className="text-base font-black text-foreground">
+                              ₹{totalWithdrawals.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          </div>
+
+                          <div className={`bg-card/45 border border-border/30 rounded-xl p-4 shadow-sm flex flex-col gap-1 text-left ${
+                            netFlow >= 0 ? "border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.05)]" : "border-rose-500/20 shadow-[0_0_10px_rgba(244,63,94,0.05)]"
+                          }`}>
+                            <span className="text-[10px] text-muted-foreground font-black uppercase tracking-wider flex items-center gap-1">
+                              <span>📊</span> Net Capital Flow
+                            </span>
+                            <span className={`text-base font-black ${netFlow >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                              {netFlow >= 0 ? "+" : ""}₹{netFlow.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          </div>
                         </div>
                       );
-                    }
+                    })()}
 
-                    return (
-                      <div className="border border-border/50 rounded-xl bg-card/20 overflow-hidden shadow-sm divide-y divide-border/30">
-                        {recentLogs.map((log, logIdx) => {
-                          const isCompleted = log.checked && (log.emoji === "✅" || log.emoji === "💯");
-                          const catTheme = CATEGORY_THEMES[log.category_id] || CATEGORY_THEMES.p1;
-                          
-                          // Format date nicely in local format
-                          const formattedTime = (() => {
-                            if (!log.logged_at) return "Recently Updated";
-                            try {
-                              const d = new Date(log.logged_at);
-                              return d.toLocaleString("en-IN", {
-                                dateStyle: "medium",
-                                timeStyle: "short"
-                              });
-                            } catch {
-                              return "Recently Updated";
-                            }
-                          })();
+                    {/* Capital History List */}
+                    <div className="flex flex-col gap-6">
+                      {(() => {
+                        const capitalLogs = [...dbLogs].filter((log) => {
+                          if (log.emoji !== "📥" && log.emoji !== "📤") return false;
+                          if (historyCategoryFilter !== "all" && log.category_id !== historyCategoryFilter) {
+                            return false;
+                          }
+                          if (historyTagFilter !== "all" && log.tag !== historyTagFilter) {
+                            return false;
+                          }
+                          if (historyTimeframe !== "all") {
+                            if (!log.logged_at) return false;
+                            const logTime = new Date(log.logged_at).getTime();
+                            const limit = historyTimeframe === "week" ? 7 * 24 * 60 * 60 * 1000 : 30 * 24 * 60 * 60 * 1000;
+                            if (Date.now() - logTime > limit) return false;
+                          }
+                          return true;
+                        }).sort((a, b) => {
+                          const timeA = a.logged_at ? new Date(a.logged_at).getTime() : 0;
+                          const timeB = b.logged_at ? new Date(b.logged_at).getTime() : 0;
+                          return timeB - timeA;
+                        });
 
+                        if (capitalLogs.length === 0) {
                           return (
-                            <div key={`${log.category_id}-d${log.day_index}-${logIdx}`} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-card/40 transition-colors">
-                              {/* Left details: Timestamp, Category Indicator, Day Index, Status */}
-                              <div className="flex items-center gap-3 flex-wrap">
-                                {/* Time display */}
-                                <div className="text-[9px] font-black text-muted-foreground/60 bg-background border border-border/40 px-2 py-1 rounded shrink-0">
-                                  {formattedTime}
-                                </div>
-
-                                {/* Category Tag */}
-                                <div className={`text-[10px] font-bold text-white bg-gradient-to-r ${catTheme.primary} px-2.5 py-0.5 rounded-full shrink-0 shadow-sm capitalize`}>
-                                  {log.category_name}
-                                </div>
-
-                                {/* Day label */}
-                                <div className="text-[10px] font-black text-foreground bg-accent/25 border border-border/30 px-2 py-0.5 rounded shrink-0">
-                                  Day {log.day_index}
-                                </div>
-
-                                {/* Emoji Status */}
-                                {log.checked ? (
-                                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1 shrink-0 ${
-                                    isCompleted
-                                      ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                                      : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                                  }`}>
-                                    <span>{log.emoji}</span>
-                                    <span>{isCompleted ? "Completed" : "Pending"}</span>
-                                  </span>
-                                ) : (
-                                  <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-zinc-500/10 text-zinc-400 border border-zinc-500/25 shrink-0">
-                                    Unchecked
-                                  </span>
-                                )}
-                              </div>
-
-                              {/* Right details: Custom Note, Custom Price & Log Deletion */}
-                              <div className="flex flex-grow items-center justify-end gap-6 flex-wrap md:flex-nowrap">
-                                {/* Note bubble */}
-                                {log.note ? (
-                                  <div className="text-[10px] text-foreground bg-background/50 border border-border/40 px-2.5 py-1.5 rounded-lg max-w-md flex-grow whitespace-pre-wrap leading-normal font-medium text-left">
-                                    <span className="text-muted-foreground font-semibold block text-[8px] uppercase tracking-wider mb-0.5">Note:</span>
-                                    {log.note}
-                                  </div>
-                                ) : (
-                                  <div className="text-[9px] text-muted-foreground/30 italic">No note added</div>
-                                )}
-
-                                {/* Price indicator */}
-                                {log.price ? (
-                                  <div className="text-[10px] font-black text-foreground bg-primary/10 border border-primary/20 px-2 py-1 rounded shrink-0">
-                                    ₹{log.price}
-                                  </div>
-                                ) : (
-                                  <div className="text-[9px] text-muted-foreground/30 italic shrink-0">No price override</div>
-                                )}
-
-                                {/* Delete log button */}
-                                <button
-                                  onClick={() => handleDeleteLog(log.id)}
-                                  className="p-1.5 rounded-lg border border-destructive/20 text-destructive hover:bg-destructive/10 hover:border-destructive/30 transition-all shrink-0 ml-2"
-                                  title="Delete log entry"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
+                            <div className="flex flex-col items-center justify-center p-12 border border-dashed border-border/60 rounded-xl bg-background/20 text-center animate-fade-in">
+                              <span className="text-2xl mb-2">📥</span>
+                              <h4 className="text-xs font-semibold text-foreground mb-1">No Capital Logs Found</h4>
+                              <p className="text-[10px] text-muted-foreground max-w-xs leading-relaxed">
+                                No deposits or withdrawals matching the selected criteria have been logged yet.
+                              </p>
                             </div>
                           );
-                        })}
+                        }
+
+                        return (
+                          <div className="border border-border/50 rounded-xl bg-card/20 overflow-hidden shadow-sm divide-y divide-border/30">
+                            {capitalLogs.map((log, logIdx) => {
+                              const catTheme = CATEGORY_THEMES[log.category_id] || CATEGORY_THEMES.p1;
+                              const formattedTime = log.logged_at ? new Date(log.logged_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "Recently";
+                              return (
+                                <div key={`cap-log-${logIdx}`} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-card/40 transition-colors">
+                                  <div className="flex items-center gap-3 flex-wrap">
+                                    <span className="text-[9px] font-black text-muted-foreground/60 bg-background border border-border/40 px-2 py-1 rounded shrink-0">{formattedTime}</span>
+                                    <span className={`text-[10px] font-bold text-white bg-gradient-to-r ${catTheme.primary} px-2.5 py-0.5 rounded-full shrink-0`}>{log.category_name}</span>
+                                    <span className={`text-[10px] font-black px-2 py-0.5 rounded border flex items-center gap-1 ${
+                                      log.emoji === "📥" ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-rose-500/10 border-rose-500/20 text-rose-400"
+                                    }`}>
+                                      {log.emoji} {log.emoji === "📥" ? "Deposit" : "Withdrawal"}
+                                    </span>
+                                    {log.tag && (
+                                      <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider ${
+                                        log.tag === "p" ? "bg-cyan-500/15 text-cyan-300 border border-cyan-500/25" : "bg-amber-500/15 text-amber-300 border border-amber-500/25"
+                                      }`}>
+                                        {log.tag === "p" ? "Personal" : "Professional"}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex flex-grow items-center justify-end gap-6 flex-wrap md:flex-nowrap">
+                                    {log.note ? (
+                                      <div className="text-[10px] text-foreground bg-background/50 border border-border/40 px-2.5 py-1.5 rounded-lg max-w-md flex-grow whitespace-pre-wrap leading-normal font-medium text-left">
+                                        <span className="text-muted-foreground font-semibold block text-[8px] uppercase tracking-wider mb-0.5">Note:</span>
+                                        {log.note}
+                                      </div>
+                                    ) : (
+                                      <div className="text-[9px] text-muted-foreground/30 italic">No notes</div>
+                                    )}
+                                    <div className={`text-xs font-black px-3 py-1.5 rounded-lg border shrink-0 ${
+                                      log.emoji === "📥" ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-rose-500/10 border-rose-500/20 text-rose-400"
+                                    }`}>
+                                      ₹{(parseFloat(log.price) || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                                    </div>
+                                    <button
+                                      onClick={() => handleDeleteLog(log.id)}
+                                      className="p-1.5 rounded-lg border border-destructive/20 text-destructive hover:bg-destructive/10 hover:border-destructive/30 transition-all shrink-0 ml-2"
+                                      title="Delete log entry"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* Activity History Filter Controls */}
+                    <div className="flex flex-wrap items-center gap-3">
+                      {/* Category Filter */}
+                      <select
+                        value={historyCategoryFilter}
+                        onChange={(e) => setHistoryCategoryFilter(e.target.value)}
+                        className="bg-background border border-border/80 text-foreground text-[10px] font-semibold rounded-lg px-2.5 py-1.5 focus:border-primary/50 outline-none cursor-pointer shadow-sm capitalize"
+                      >
+                        <option value="all">All Trackers</option>
+                        <option value="global">Global Wallet</option>
+                        {categories.map((cat) => (
+                          <option key={cat.id} value={cat.id}>
+                            {cat.name}
+                          </option>
+                        ))}
+                      </select>
+
+                      {/* Timeframe Filter */}
+                      <select
+                        value={historyTimeframe}
+                        onChange={(e) => setHistoryTimeframe(e.target.value as any)}
+                        className="bg-background border border-border/80 text-foreground text-[10px] font-semibold rounded-lg px-2.5 py-1.5 focus:border-primary/50 outline-none cursor-pointer shadow-sm"
+                      >
+                        <option value="all">All Time</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                      </select>
+
+                      {/* Status Filter Buttons */}
+                      <div className="flex flex-wrap items-center gap-1.5 bg-background/50 border border-border/50 p-1 rounded-lg">
+                        {[
+                          { id: "all", label: "All Timeline", icon: "📁" },
+                          { id: "checked", label: "Checked", icon: "✅" },
+                          { id: "pending", label: "Pending", icon: "❓" },
+                          { id: "notes", label: "With Notes", icon: "📝" },
+                          { id: "prices", label: "With Prices", icon: "💰" }
+                        ].map((btn) => (
+                          <button
+                            key={btn.id}
+                            onClick={() => setHistoryFilter(btn.id as any)}
+                            className={`text-[10px] px-2.5 py-1 rounded font-semibold transition-all flex items-center gap-1 ${
+                              historyFilter === btn.id
+                                ? "bg-primary text-primary-foreground shadow-sm"
+                                : "hover:bg-accent text-muted-foreground hover:text-foreground"
+                            }`}
+                          >
+                            <span>{btn.icon}</span>
+                            <span>{btn.label}</span>
+                          </button>
+                        ))}
                       </div>
-                    );
-                  })()}
-                </div>
+                    </div>
+
+                    {/* Timeline List (Day blocks toggled, notes, compounding) */}
+                    <div className="flex flex-col gap-6">
+                      {(() => {
+                        const recentLogs = [...dbLogs].filter((log) => {
+                          // Exclude deposits and withdrawals from activity list
+                          if (log.emoji === "📥" || log.emoji === "📤") return false;
+
+                          if (historyCategoryFilter !== "all" && log.category_id !== historyCategoryFilter) {
+                            return false;
+                          }
+                          if (historyTimeframe !== "all") {
+                            if (!log.logged_at) return false;
+                            const logTime = new Date(log.logged_at).getTime();
+                            const limit = historyTimeframe === "week" ? 7 * 24 * 60 * 60 * 1000 : 30 * 24 * 60 * 60 * 1000;
+                            if (Date.now() - logTime > limit) return false;
+                          }
+                          if (historyFilter === "all") {
+                            return true;
+                          }
+                          if (historyFilter === "checked") {
+                            return log.checked && (log.emoji === "✅" || log.emoji === "💯");
+                          }
+                          if (historyFilter === "pending") {
+                            return log.checked && log.emoji === "❓";
+                          }
+                          if (historyFilter === "notes") {
+                            return log.note && log.note.trim() !== "";
+                          }
+                          if (historyFilter === "prices") {
+                            return log.price && log.price.trim() !== "";
+                          }
+                          return false;
+                        }).sort((a, b) => {
+                          const timeA = a.logged_at ? new Date(a.logged_at).getTime() : 0;
+                          const timeB = b.logged_at ? new Date(b.logged_at).getTime() : 0;
+                          return timeB - timeA;
+                        });
+
+                        if (recentLogs.length === 0) {
+                          return (
+                            <div className="flex flex-col items-center justify-center p-12 border border-dashed border-border/60 rounded-xl bg-background/20 text-center animate-fade-in">
+                              <span className="text-2xl mb-2">⏱️</span>
+                              <h4 className="text-xs font-semibold text-foreground mb-1">No Activity Logs Found</h4>
+                              <p className="text-[10px] text-muted-foreground max-w-xs leading-relaxed">
+                                No activity timeline logs match the selected filters.
+                              </p>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div className="border border-border/50 rounded-xl bg-card/20 overflow-hidden shadow-sm divide-y divide-border/30">
+                            {recentLogs.map((log, logIdx) => {
+                              const isCompleted = log.checked && (log.emoji === "✅" || log.emoji === "💯");
+                              const catTheme = CATEGORY_THEMES[log.category_id] || CATEGORY_THEMES.p1;
+                              const formattedTime = log.logged_at ? new Date(log.logged_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "Recently";
+                              return (
+                                <div key={`act-log-${logIdx}`} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-card/40 transition-colors">
+                                  <div className="flex items-center gap-3 flex-wrap">
+                                    <span className="text-[9px] font-black text-muted-foreground/60 bg-background border border-border/40 px-2 py-1 rounded shrink-0">{formattedTime}</span>
+                                    <span className={`text-[10px] font-bold text-white bg-gradient-to-r ${catTheme.primary} px-2.5 py-0.5 rounded-full shrink-0 shadow-sm capitalize`}>{log.category_name}</span>
+                                    <span className="text-[10px] font-black text-foreground bg-accent/25 border border-border/30 px-2 py-0.5 rounded shrink-0">Day {log.day_index}</span>
+                                    {log.checked ? (
+                                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1 shrink-0 ${
+                                        isCompleted ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                                      }`}>
+                                        <span>{log.emoji}</span>
+                                        <span>{isCompleted ? "Completed" : "Pending"}</span>
+                                      </span>
+                                    ) : (
+                                      <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-zinc-500/10 text-zinc-400 border border-zinc-500/25 shrink-0">Unchecked</span>
+                                    )}
+                                  </div>
+                                  <div className="flex flex-grow items-center justify-end gap-6 flex-wrap md:flex-nowrap">
+                                    {log.note ? (
+                                      <div className="text-[10px] text-foreground bg-background/50 border border-border/40 px-2.5 py-1.5 rounded-lg max-w-md flex-grow whitespace-pre-wrap leading-normal font-medium text-left">
+                                        <span className="text-muted-foreground font-semibold block text-[8px] uppercase tracking-wider mb-0.5">Note:</span>
+                                        {log.note}
+                                      </div>
+                                    ) : (
+                                      <div className="text-[9px] text-muted-foreground/30 italic">No notes</div>
+                                    )}
+                                    {log.price ? (
+                                      <div className="text-[10px] font-black text-foreground bg-primary/10 border border-primary/20 px-2 py-1 rounded shrink-0">₹{log.price}</div>
+                                    ) : (
+                                      <div className="text-[9px] text-muted-foreground/30 italic shrink-0">No price override</div>
+                                    )}
+                                    <button
+                                      onClick={() => handleDeleteLog(log.id)}
+                                      className="p-1.5 rounded-lg border border-destructive/20 text-destructive hover:bg-destructive/10 hover:border-destructive/30 transition-all shrink-0 ml-2"
+                                      title="Delete log entry"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </>
+                )}
               </section>
             ) : (
               <>
@@ -1587,21 +2346,31 @@ ALTER TABLE public.tracker_logs DISABLE ROW LEVEL SECURITY;`}
                     </div>
 
                     {/* Input Rate */}
-                    <div className="flex items-center bg-background/50 border border-border/50 rounded-lg px-2.5 py-1 focus-within:border-primary/50 transition-colors">
-                      <span className="text-[11px] text-muted-foreground mr-1.5">Compounding Rate (%)</span>
-                      <input
-                        type="number"
-                        step="0.1"
-                        value={activeCategory.rate}
-                        onChange={(e) => handleUpdateCalculatorConfig("rate", e.target.value)}
-                        onBlur={() => saveCalculatorConfigToDb(activeCategoryId, activeCategory.principal, activeCategory.rate)}
-                        className="bg-transparent border-none text-xs outline-none w-12 text-foreground font-semibold"
-                        placeholder="25"
-                      />
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-1.5">
+                      <div className="flex items-center bg-background/50 border border-border/50 rounded-lg px-2.5 py-1 focus-within:border-primary/50 transition-colors">
+                        <span className="text-[11px] text-muted-foreground mr-1.5">Compounding Rate / Multiplier</span>
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={activeCategory.rate}
+                          onChange={(e) => handleUpdateCalculatorConfig("rate", e.target.value)}
+                          onBlur={() => saveCalculatorConfigToDb(activeCategoryId, activeCategory.principal, activeCategory.rate)}
+                          className="bg-transparent border-none text-xs outline-none w-14 text-foreground font-semibold"
+                          placeholder="25"
+                        />
+                      </div>
+                      {(() => {
+                        const rVal = parseFloat(activeCategory.rate) || 0;
+                        return (
+                          <span className="text-[9px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded shrink-0">
+                            {rVal <= 0 ? "No compounding" : rVal <= 10 ? `Parsed: ${rVal}x multiplier` : `Parsed: +${rVal}% daily growth`}
+                          </span>
+                        );
+                      })()}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 self-end md:self-auto">
+                  <div className="flex flex-wrap items-center gap-2 self-end md:self-auto">
                     <button
                       onClick={handleGenerateTargets}
                       className="flex items-center gap-1 text-xs font-semibold px-3.5 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/95 shadow-sm transition-all duration-200"
@@ -1650,7 +2419,7 @@ ALTER TABLE public.tracker_logs DISABLE ROW LEVEL SECURITY;`}
                       // Calculate target price on the fly (for display only, not stored in DB)
                       const principalNum = parseFloat(activeCategory.principal) || 0;
                       const rateNum = parseFloat(activeCategory.rate) || 0;
-                      const targetVal = principalNum * Math.pow(1 + rateNum / 100, dayIndex);
+                      const targetVal = principalNum * Math.pow(getCompoundingMultiplier(rateNum), dayIndex);
                       const targetValStr = targetVal.toFixed(2);
 
                       return (
@@ -1800,12 +2569,21 @@ ALTER TABLE public.tracker_logs DISABLE ROW LEVEL SECURITY;`}
                               </button>
                             ) : day.price ? (
                               /* Show custom saved price if overlay is not active */
-                              <button
-                                onClick={() => triggerPriceEdit(idx, day.price)}
-                                className="text-[10px] font-black text-foreground hover:text-primary transition-colors"
-                              >
-                                ₹{day.price}
-                              </button>
+                              <div className="flex items-center gap-1.5 justify-center">
+                                <button
+                                  onClick={() => triggerPriceEdit(idx, day.price)}
+                                  className="text-[10px] font-black text-foreground hover:text-primary transition-colors"
+                                >
+                                  ₹{day.price}
+                                </button>
+                                <button
+                                  onClick={() => handleCompoundFromDay(idx)}
+                                  className="px-1 py-0.5 rounded bg-primary/10 hover:bg-primary/20 text-primary hover:scale-105 active:scale-95 transition-all text-[8px] font-bold select-none shrink-0"
+                                  title="Compound subsequent days starting from this block's price"
+                                >
+                                  📈
+                                </button>
+                              </div>
                             ) : (
                               /* Show Add Price button */
                               <button
