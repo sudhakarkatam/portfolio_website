@@ -1,5 +1,4 @@
 import { portfolioData } from "@/data/portfolioData";
-import { gamesData } from "@/data/gamesData";
 import { customContext } from "@/data/customContext";
 import { getApiEndpoint } from "@/utils/platformUtils";
 
@@ -142,27 +141,7 @@ export const buildPortfolioContext = (): string => {
   context += `- Format ALL links as clickable buttons: [Link Text](URL) or [Link Text](mailto:email)\n`;
   context += `- Always include descriptive text after "Social Links" heading\n\n`;
 
-  // Games
-  context += `\nGAMES & INTERACTIVE FEATURES:\n`;
-  context += `This portfolio includes ${gamesData.length} interactive games that visitors can play:\n\n`;
-  gamesData.forEach((game, index) => {
-    context += `${index + 1}. **${game.title}**\n`;
-    context += `   Category: ${game.category}\n`;
-    context += `   Description: ${game.description}\n`;
-    context += `   ID: ${game.id}\n`;
-    context += "\n";
-  });
-  context += `\nCHAT GAMES (Available in AI Mode):\n`;
-  context += `There are also 2 mini-games that can be played directly in the chat:\n`;
-  context += `1. **Roll a Dice**: Interactive dice rolling game - generates random numbers from 1 to 6\n`;
-  context += `2. **Toss a Coin**: Interactive coin flip game - generates random heads or tails\n`;
-  context += `These chat games are available when using AI models. Users can say "roll dice" or "toss coin" to play.\n\n`;
-  context += `When users ask about games or want to play games:\n`;
-  context += `- First, list all ${gamesData.length} available games from the games section with their descriptions\n`;
-  context += `- Explain that they can play these games by navigating to the games section\n`;
-  context += `- Then, at the END of your response, mention the chat games: "You can also play two mini-games directly in the chat: Roll a Dice and Toss a Coin. Just ask me to roll a dice or toss a coin!"\n`;
-  context += `- Be enthusiastic and encourage them to try the games\n`;
-  context += `- If they want to play a specific game, mention the game name and guide them to access it\n\n`;
+
 
   // Add custom context if provided
   if (customContext && customContext.trim().length > 0) {
@@ -209,23 +188,7 @@ export const buildPortfolioContext = (): string => {
   context += `4. **Provide examples**: When users seem unsure, offer examples of good questions they can ask\n`;
   context += `5. **Build context**: Reference previous conversation topics when relevant to create a cohesive experience\n`;
   context += `6. **Be proactive**: Don't just answer questions - help users discover interesting aspects of the portfolio\n\n`;
-  context += `HANDLING GAME QUERIES:\n`;
-  context += `When users ask about games, want to play games, or mention games:\n`;
-  context += `1. **List Games**: Provide a list of all ${gamesData.length} available games:\n`;
-  gamesData.forEach((game) => {
-    context += `   - **${game.title}**: ${game.description}\n`;
-  });
-  context += `2. **Explain Access**: Tell them they can play these games on the portfolio website by navigating to the games section\n`;
-  context += `3. **Mention Chat Games**: At the END of your response, add: "You can also play two mini-games directly in the chat: Roll a Dice and Toss a Coin. Just ask me to roll a dice or toss a coin!"\n`;
-  context += `4. **Encourage**: Be enthusiastic and encourage them to try the games\n`;
-  context += `5. **Navigation**: If they want to play, tell them to navigate to the games section or use the sidebar\n`;
-  context += `6. **Specific Game**: If they mention a specific game, highlight that game and guide them to it\n`;
-  context += `7. **Format**: Use proper headings and bullet points for the game list\n\n`;
-  context += `HANDLING DICE ROLL & COIN TOSS:\n`;
-  context += `When users ask to "roll dice", "roll a dice", "toss coin", "toss a coin", "flip coin", etc.:\n`;
-  context += `- Provide a brief, friendly response like: "Sure! Here's an interactive dice/coin game for you!"\n`;
-  context += `- The game component will be displayed automatically, so keep your text brief\n`;
-  context += `- Be enthusiastic and fun about it\n\n`;
+
   context += `RESPONSE GUIDELINES:\n`;
   context += `1. **Be Natural & Conversational**: Write as if you're ${name} speaking directly, but maintain a professional tone\n`;
   context += `2. **Be Specific**: Always reference specific projects, technologies, or experiences when relevant\n`;
@@ -338,24 +301,6 @@ export const buildPortfolioContext = (): string => {
   context += `### Send a Message Through Form\n`;
   context += `You can also send me a message directly through the contact form on this website. Would you like me to show you the contact form?\n\n`;
   context += `Feel free to reach out for opportunities, technical discussions, or just to say hello! 😊\n\n`;
-  context += `**Example - "Games" Response:**\n`;
-  context += `When asked about games or wanting to play:\n`;
-  context += `## Interactive Games\n\n`;
-  context += `I've built some fun interactive games that you can play right here on my portfolio! Here's what's available:\n\n`;
-  context += `### Entertainment Games\n\n`;
-  context += `**1. Tic-Tac-Toe**\n`;
-  context += `Classic 3x3 grid game. Play against the computer on easy difficulty!\n\n`;
-  context += `**2. Memory Match**\n`;
-  context += `Test your memory skills by matching pairs of cards. How fast can you complete it?\n\n`;
-  context += `### Educational Games\n\n`;
-  context += `**3. Typing Speed Test**\n`;
-  context += `Improve your typing skills with this interactive speed test. Perfect for developers!\n\n`;
-  context += `**4. Code Quiz**\n`;
-  context += `Test your programming knowledge with questions about various technologies and concepts.\n\n`;
-  context += `Would you like to play any of these games? Just navigate to the games section using the sidebar, or let me know which game interests you!\n\n`;
-  context += `**Chat Games**\n`;
-  context += `You can also play two mini-games directly in the chat: **Roll a Dice** and **Toss a Coin**. Just ask me to roll a dice or toss a coin!\n\n`;
-
   return context;
 };
 

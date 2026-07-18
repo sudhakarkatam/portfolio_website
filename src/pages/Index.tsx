@@ -22,19 +22,12 @@ import { FloatingParticles } from "@/components/FloatingParticles";
 import { GradientBackground } from "@/components/GradientBackground";
 import { MemojiAvatar } from "@/components/hero/MemojiAvatar";
 import { DeepWorkPlayer } from "@/components/DeepWorkPlayer";
-import { GameGrid } from "@/components/games/GameGrid";
-import { TicTacToe } from "@/components/games/TicTacToe";
-import { MemoryMatch } from "@/components/games/MemoryMatch";
-import { TypingSpeed } from "@/components/games/TypingSpeed";
-import { CodeQuiz } from "@/components/games/CodeQuiz";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Message } from "@/types/portfolio";
 import { portfolioData } from "@/data/portfolioData";
 import { toast } from "sonner";
 import { ModelSelector, AVAILABLE_MODELS } from "@/components/ModelSelector";
 import { ContactForm } from "@/components/ContactForm";
-import { DiceRoll } from "@/components/chatGames/DiceRoll";
-import { CoinToss } from "@/components/chatGames/CoinToss";
 import { Guestbook } from "@/components/Guestbook";
 import { generateResponse } from "@/utils/chatResponses";
 
@@ -95,7 +88,6 @@ const Index = () => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [showQuickQuestions, setShowQuickQuestions] = useState(true);
   const [currentView, setCurrentView] = useState("home");
-  const [selectedGame, setSelectedGame] = useState<string | null>(null);
   const [sidebarKey, setSidebarKey] = useState(0);
   const [localComponents, setLocalComponents] = useState<
     Record<string, React.ReactNode>
@@ -359,23 +351,14 @@ const Index = () => {
   };
 
   const handleNavigate = (section: string, projectId?: string) => {
-    if (section === "games") {
-      setCurrentView("games");
-      setSelectedGame(null); // Reset to grid view
-      setIsChatExpanded(false);
-      return;
-    }
-
     if (section === "home") {
       setCurrentView("home");
-      setSelectedGame(null);
       setIsChatExpanded(false);
       return;
     }
 
     // For all other sections (about, skills, projects, experience), switch to home view and start chat
     setCurrentView("home");
-    setSelectedGame(null);
     setIsChatExpanded(true); // Expand chat to show the response
 
     const queries: Record<string, string> = {
@@ -412,7 +395,6 @@ const Index = () => {
     setIsChatExpanded(false);
     setInput("");
     setCurrentView("home");
-    setSelectedGame(null);
     setSidebarKey((prev) => prev + 1); // Force sidebar to remount and reset to collapsed
     toast.success("Chat refreshed");
   };
@@ -435,15 +417,6 @@ const Index = () => {
     setInput("");
     setIsMobileSidebarOpen(false);
     setCurrentView("home");
-    setSelectedGame(null);
-  };
-
-  const handlePlayGame = (gameId: string) => {
-    setSelectedGame(gameId);
-  };
-
-  const handleBackToGames = () => {
-    setSelectedGame(null);
   };
 
   return (
@@ -553,36 +526,7 @@ const Index = () => {
             </motion.div>
           )}
 
-          {/* Games View */}
-          {currentView === "games" && !isChatExpanded && (
-            <motion.div
-              key="games-view"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.3 }}
-              className="absolute top-0 left-0 right-0 bottom-0 overflow-y-auto"
-            >
-              {selectedGame ? (
-                <>
-                  {selectedGame === "tic-tac-toe" && (
-                    <TicTacToe onBack={handleBackToGames} />
-                  )}
-                  {selectedGame === "memory-match" && (
-                    <MemoryMatch onBack={handleBackToGames} />
-                  )}
-                  {selectedGame === "typing-speed" && (
-                    <TypingSpeed onBack={handleBackToGames} />
-                  )}
-                  {selectedGame === "code-quiz" && (
-                    <CodeQuiz onBack={handleBackToGames} />
-                  )}
-                </>
-              ) : (
-                <GameGrid onPlayGame={handlePlayGame} />
-              )}
-            </motion.div>
-          )}
+
 
           {/* Welcome Content Area */}
           {currentView === "home" && !isChatExpanded && (

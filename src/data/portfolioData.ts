@@ -248,62 +248,6 @@ export const portfolioData: PortfolioData = {
         "Secure file sharing architecture",
       ],
     },
-    {
-      id: "5",
-      title: "JobFinder Hub",
-      description:
-        "A comprehensive job board platform with admin dashboard for managing job postings and blogs. Features skill-based job matching, intelligent tag system with related suggestions, and direct application redirects to company websites.",
-      technologies: [
-        "React",
-        "TypeScript",
-        "Supabase",
-        "MySQL",
-        "Vercel",
-        "Framer Motion",
-        "Tailwind CSS",
-        "shadcn/ui",
-      ],
-      github: "https://github.com/sudhakarkatam/Jobfinder-hub",
-      link: "https://jobfinder-hub.vercel.app",
-      status: "Live",
-      category: "Job Portal",
-      icon: "Briefcase",
-      demoUrl: "https://jobfinder-hub.vercel.app",
-      caseStudyUrl: "",
-      duration: "2 weeks",
-      teamSize: "Solo Project",
-      role: "Full Stack Developer",
-      features: [
-        "Admin dashboard for job and blog management",
-        "Skill-based job matching and filtering",
-        "Smart tag system with related tag suggestions",
-        "Detailed job descriptions with apply now redirects",
-        "Blog section for career advice and insights",
-        "Search functionality with tag filtering",
-      ],
-      challenges: [
-        {
-          title: "Building intelligent tag matching system",
-          solution:
-            "Implemented tag relationships and suggestions using Supabase queries with full-text search capabilities",
-        },
-      ],
-      results: [
-        { value: "1000+", metric: "Job listings" },
-        { value: "Real-time", metric: "Tag suggestions" },
-      ],
-      achievements: [
-        "Comprehensive job discovery platform",
-        "Intelligent search and matching system",
-      ],
-      images: ["/placeholder.svg", "/placeholder.svg"],
-      image: "/placeholder.svg",
-      learnings: [
-        "Tag-based search implementation",
-        "Admin dashboard design patterns",
-        "Real-time data filtering and search functionality",
-      ],
-    },
   ],
 
   experience: [

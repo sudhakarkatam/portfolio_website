@@ -4,10 +4,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
-import Portfolio from "./pages/Portfolio";
+import Portfolio from "./pages/portfolio/index";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
-import CalTool from "./pages/CalTool";
 import AdminLayout from "./layouts/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
 import GuestbookManager from "./pages/admin/GuestbookManager";
@@ -40,7 +39,6 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/portfolio" element={<Portfolio />} />
-          <Route path="/caltool" element={<CalTool />} />
 
           {/* Admin Routes */}
           <Route path="/login" element={<Login />} />

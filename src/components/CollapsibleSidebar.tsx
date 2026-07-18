@@ -47,7 +47,6 @@ export const CollapsibleSidebar = ({
     { id: 'skills', label: 'Skills', icon: Code, color: 'text-purple-600 dark:text-gray-400 dark:group-hover:text-white' },
     { id: 'projects', label: 'Projects', icon: FolderKanban, hasSubmenu: true, color: 'text-orange-600 dark:text-gray-400 dark:group-hover:text-white' },
     { id: 'experience', label: 'Experience', icon: Briefcase, color: 'text-emerald-600 dark:text-gray-400 dark:group-hover:text-white' },
-    { id: 'games', label: 'Games', icon: Gamepad2, desktopOnly: true, color: 'text-pink-600 dark:text-gray-400 dark:group-hover:text-white' },
   ];
 
   const toggleProjects = () => setExpandedProjects(!expandedProjects);

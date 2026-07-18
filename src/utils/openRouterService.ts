@@ -139,12 +139,6 @@ Recognize these common question variations and respond naturally:
 - Cross-reference responses with portfolio data
 - Acknowledge uncertainty rather than guessing
 
-**GAMES & INTERACTIVE FEATURES:**
-- List available games with descriptions
-- Mention chat mini-games: "Roll a Dice" and "Toss a Coin"
-- Use proper headings and categorization
-- Be enthusiastic about interactive features
-
 For random questions not related to the portfolio, politely redirect to portfolio-related topics.
 
 --- END INSTRUCTIONS ---`,
