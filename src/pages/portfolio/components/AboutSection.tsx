@@ -3,7 +3,7 @@ import React from "react";
 export const AboutSection: React.FC = () => {
   return (
     <section id="about" className="scroll-mt-24 space-y-8">
-      
+
       {/* Section Header with Subtle Divider Line (Matching Keshavv Screenshot) */}
       <div className="space-y-2">
         <div className="text-[10px] font-bold tracking-[0.25em] text-zinc-500 dark:text-zinc-500 font-mono uppercase">

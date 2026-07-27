@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { portfolioData } from "@/data/portfolioData";
 import { Navbar } from "./components/Navbar";
 import { Hero } from "./components/Hero";
@@ -8,9 +9,12 @@ import { SkillsMarquee } from "./components/SkillsMarquee";
 import { SkillsSection } from "./components/SkillsSection";
 import { Projects } from "./components/Projects";
 import { Contact } from "./components/Contact";
+import { motion } from "framer-motion";
 
 const PortfolioPage: React.FC = () => {
   const { name, bio, skills, projects, contact } = portfolioData;
+  const location = useLocation();
+  const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState("about");
   
   // Manage theme state
@@ -18,6 +22,27 @@ const PortfolioPage: React.FC = () => {
     const saved = localStorage.getItem("portfolio-theme");
     return (saved as "light" | "dark") || "dark";
   });
+
+  // Handle initial route for /portfolio/projects or #contact hash
+  useEffect(() => {
+    if (location.pathname === "/portfolio/projects") {
+      setActiveSection("projects");
+      setTimeout(() => {
+        const el = document.getElementById("projects");
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth" });
+        }
+      }, 150);
+    } else if (location.hash === "#contact" || window.location.hash === "#contact" || window.location.href.includes("#contact")) {
+      setActiveSection("contact");
+      setTimeout(() => {
+        const el = document.getElementById("contact");
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth" });
+        }
+      }, 150);
+    }
+  }, [location.pathname, location.hash]);
 
   // Dynamically crop browser tab title bar favicon into a perfect round circle
   useEffect(() => {
@@ -69,7 +94,7 @@ const PortfolioPage: React.FC = () => {
   // Scroll spy listener
   useEffect(() => {
     const handleScroll = () => {
-      const sections = ["about", "projects", "skills", "contact"];
+      const sections = ["about", "skills", "contact"];
       const scrollPos = window.scrollY + 200;
 
       for (const section of sections) {
@@ -90,10 +115,32 @@ const PortfolioPage: React.FC = () => {
   }, []);
 
   const handleNavigate = (id: string) => {
-    const el = document.getElementById(id);
-    if (el) {
+    if (id === "projects") {
+      if (location.pathname !== "/portfolio/projects") {
+        navigate("/portfolio/projects");
+      }
+    } else if (id === "contact") {
+      setActiveSection("contact");
+      if (location.pathname !== "/portfolio") {
+        navigate("/portfolio#contact");
+      } else {
+        const el = document.getElementById("contact");
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth" });
+        }
+      }
+    } else {
       setActiveSection(id);
-      el.scrollIntoView({ behavior: "smooth" });
+      if (location.pathname !== "/portfolio") {
+        navigate("/portfolio");
+      } else {
+        const el = document.getElementById(id);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth" });
+        } else {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+      }
     }
   };
 
@@ -143,28 +190,43 @@ const PortfolioPage: React.FC = () => {
       />
 
       {/* Main Container aligned to 780px centered column */}
-      <main className="relative z-10 mx-auto max-w-[780px] px-4 sm:px-6 py-12 space-y-24">
+      <main className="relative z-10 mx-auto max-w-[780px] px-4 sm:px-6 py-12 space-y-16">
         
         {/* Hero Section */}
         <Hero name={name} bio={bio} contact={contact} />
 
         {/* Section 1: About Section */}
-        <AboutSection />
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-60px" }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        >
+          <AboutSection />
+        </motion.div>
 
         {/* Work Section (Hidden for now) */}
         {/* <WorkSection /> */}
 
-        {/* Technical Skills Marquee Banner */}
-        <SkillsMarquee skills={skills} />
-
-        {/* Section 2: Projects List */}
-        <Projects projects={projects} />
-
-        {/* Section 3: Skills & Technologies Grid */}
-        <SkillsSection />
+        {/* Section 2: Skills & Technologies Grid */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-60px" }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        >
+          <SkillsSection />
+        </motion.div>
 
         {/* Section 4: Contact */}
-        <Contact contact={contact} />
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-60px" }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        >
+          <Contact contact={contact} />
+        </motion.div>
 
       </main>
     </div>

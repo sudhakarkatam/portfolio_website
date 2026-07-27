@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { FaGithub, FaLinkedin, FaXTwitter } from "react-icons/fa6";
 import { MdEmail } from "react-icons/md";
+import { Copy, Check } from "lucide-react";
+import { toast } from "sonner";
 
 interface ContactProps {
   contact: {
@@ -13,6 +15,15 @@ interface ContactProps {
 
 export const Contact: React.FC<ContactProps> = ({ contact }) => {
   const [timeStr, setTimeStr] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyEmail = (e: React.MouseEvent) => {
+    e.preventDefault();
+    navigator.clipboard.writeText(contact.email);
+    setCopied(true);
+    toast.success("Email copied to clipboard!");
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   // Live IST Clock for footer
   useEffect(() => {
@@ -23,7 +34,7 @@ export const Contact: React.FC<ContactProps> = ({ contact }) => {
         hour: "2-digit",
         minute: "2-digit",
         second: "2-digit",
-        hour12: true
+        hour12: false
       });
       setTimeStr(formatter.format(now));
     };
@@ -35,11 +46,11 @@ export const Contact: React.FC<ContactProps> = ({ contact }) => {
 
   return (
     <section id="contact" className="scroll-mt-24 space-y-12">
-      
+
       {/* Bento Container Box (Subtle Muted Dark Border) */}
       <div className="bg-white dark:bg-[#070709] border border-zinc-200 dark:border-[#1e1e24] rounded-3xl p-8 sm:p-12 relative overflow-hidden group hover:border-zinc-300 dark:hover:border-zinc-700/80 transition-all duration-300">
         <div className="max-w-xl space-y-6 text-left flex flex-col items-start">
-          
+
           {/* Header Label */}
           <div className="text-[10px] font-bold tracking-[0.25em] text-zinc-500 dark:text-zinc-500 font-mono uppercase">
             CONTACT
@@ -48,24 +59,31 @@ export const Contact: React.FC<ContactProps> = ({ contact }) => {
           {/* Main Title with Horizontal Divider Line */}
           <div className="flex items-center gap-4 w-full">
             <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-white shrink-0">
-              Let's build something.
+              Let's Connect.
             </h2>
             <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800/40" />
           </div>
 
           {/* Subtitle */}
           <p className="text-zinc-650 dark:text-zinc-400 text-xs sm:text-sm leading-relaxed max-w-md">
-            Have a project, role, or an idea in mind? Just send an email.
+            Always open to a good conversation :) 😎
           </p>
 
-          {/* Direct Email Pill Button */}
-          <div className="pt-2">
+          {/* Direct Email Pill Button & Copy Action */}
+          <div className="pt-2 flex flex-wrap items-center gap-3">
             <a
               href={`mailto:${contact.email}`}
               className="inline-flex items-center justify-center px-8 py-3.5 bg-zinc-950 dark:bg-white text-white dark:text-black font-extrabold font-mono text-xs sm:text-sm rounded-full hover:scale-105 transition-all shadow-md cursor-pointer outline-none"
             >
               {contact.email}
             </a>
+            <button
+              onClick={handleCopyEmail}
+              className="p-3.5 rounded-full border border-zinc-300 dark:border-[#1e1e24] bg-zinc-100/80 dark:bg-[#070709] text-zinc-700 dark:text-zinc-300 hover:text-black dark:hover:text-white hover:scale-105 transition-all outline-none"
+              title="Copy email address"
+            >
+              {copied ? <Check size={16} className="text-emerald-500" /> : <Copy size={16} />}
+            </button>
           </div>
 
           {/* Social Icons Row */}
@@ -104,7 +122,7 @@ export const Contact: React.FC<ContactProps> = ({ contact }) => {
       {/* Page Footer */}
       <div className="pt-6 border-t border-zinc-200 dark:border-zinc-900 flex flex-col sm:flex-row items-center justify-between gap-4 text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-500">
         <div>
-          © {new Date().getFullYear()} Sudhakar. Built with <span className="text-red-500">❤️</span> and hardwork
+          © {new Date().getFullYear()} Sudhakar. Learning as I go ☕
         </div>
 
         {/* Live IST Clock */}

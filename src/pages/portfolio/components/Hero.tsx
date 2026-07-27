@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { FaGithub, FaLinkedin, FaXTwitter } from "react-icons/fa6";
 import { MdEmail } from "react-icons/md";
+import { motion, Variants } from "framer-motion";
+import { MapPin } from "lucide-react";
 
 interface HeroProps {
   name: string;
@@ -54,44 +56,77 @@ export const Hero: React.FC<HeroProps> = ({ name, bio, contact }) => {
     return () => clearTimeout(timer);
   }, [typedText, isDeleting, titleIdx, titles]);
 
-  const handleScrollToWork = () => {
-    const el = document.getElementById("projects");
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth" });
-    }
+  const handleSayHello = () => {
+    window.open("https://x.com/sudhakarkatam2", "_blank", "noopener,noreferrer");
+  };
+
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.08,
+        delayChildren: 0.1,
+      },
+    },
+  };
+
+  const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 15 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.4, ease: "easeOut" },
+    },
   };
 
   return (
-    <div className="space-y-8 pt-16">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="space-y-8 pt-16"
+    >
 
       {/* Top Typewriter Status Line */}
-      <div className="h-6 flex items-center">
+      <motion.div variants={itemVariants} className="h-6 flex items-center">
         <span className="text-sm font-mono text-zinc-650 dark:text-zinc-400 font-medium border-r-2 border-zinc-400 dark:border-zinc-500 pr-1 animate-pulse">
           {typedText}
         </span>
-      </div>
+      </motion.div>
 
       {/* Upper Hero Section - Directly on Grid */}
-      <div className="space-y-6 py-2">
+      <motion.div variants={itemVariants} className="space-y-6 py-2">
 
         {/* Profile Avatar & Header Title */}
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-8">
           {/* Completely Round Profile Image */}
-          <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden shrink-0 border border-zinc-300 dark:border-[#1e1e24] shadow-md">
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 260, damping: 20 }}
+            className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden shrink-0 border border-zinc-300 dark:border-[#1e1e24] shadow-md"
+          >
             <img
               src="/profile pic.png"
               className="w-full h-full object-cover bg-zinc-100 dark:bg-zinc-900"
               alt={name}
             />
-          </div>
+          </motion.div>
 
           <div className="space-y-2 text-center sm:text-left flex-1">
             <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-zinc-900 dark:text-white">
               Sudhakar.
             </h1>
-            <p className="text-lg sm:text-xl font-semibold text-zinc-700 dark:text-zinc-300">
-              Engineer with many interests, always curious to explore new technologies
-            </p>
+            <div className="flex flex-wrap items-center gap-2.5 pt-1 justify-center sm:justify-start">
+              <p className="text-lg sm:text-xl font-semibold text-zinc-700 dark:text-zinc-300">
+                Engineer with many interests, always curious to explore new technologies
+              </p>
+              <span className="inline-flex items-center gap-1.5 text-xs font-mono font-semibold text-zinc-650 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-2.5 py-1 rounded-full shrink-0">
+                <MapPin size={13} className="text-zinc-500 dark:text-zinc-400" />
+                <span>India</span>
+              </span>
+            </div>
           </div>
         </div>
 
@@ -102,12 +137,12 @@ export const Hero: React.FC<HeroProps> = ({ name, bio, contact }) => {
 
         {/* Action Button & Glowing Social Icons Row */}
         <div className="flex flex-wrap items-center gap-4 pt-2">
-          {/* 'see my work' pill button */}
+          {/* 'Wanna say hello' pill button */}
           <button
-            onClick={handleScrollToWork}
+            onClick={handleSayHello}
             className="inline-flex items-center justify-center px-6 py-2.5 rounded-full bg-zinc-950 dark:bg-white text-white dark:text-black text-xs sm:text-sm font-bold hover:bg-zinc-800 dark:hover:bg-zinc-200 hover:scale-105 transition-all shadow-md cursor-pointer outline-none"
           >
-            see my work
+            Wanna say hello:)
           </button>
 
           {/* Social Icon Circles */}
@@ -134,37 +169,32 @@ export const Hero: React.FC<HeroProps> = ({ name, bio, contact }) => {
           </div>
         </div>
 
-      </div>
+      </motion.div>
 
-      {/* Bottom 3 Bento Status Cards Row (Larger Card Size & Padding) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-4">
+      {/* Single-Line Monospace Status Ticker */}
+      <motion.div variants={itemVariants} className="pt-2">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 gap-x-4 py-3 border-t border-b border-zinc-200 dark:border-zinc-800/80 font-mono text-xs text-zinc-650 dark:text-zinc-400">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            <span className="font-bold text-zinc-900 dark:text-white tracking-wider">Open to Freelance Opportunities </span>
+          </div>
 
-        {/* Card 1: Availability Status */}
-        <div className="bg-white dark:bg-[#070709] border border-zinc-200 dark:border-[#1e1e24] rounded-2xl p-6 flex items-center gap-3.5 hover:border-zinc-300 dark:hover:border-zinc-700/80 transition-all min-h-[105px]">
-          <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-          <span className="text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200 leading-snug">
-            Open to work
-          </span>
-        </div>
+          <span className="hidden sm:inline text-zinc-300 dark:text-zinc-800">•</span>
 
-        {/* Card 2: Building */}
-        <div className="bg-white dark:bg-[#070709] border border-zinc-200 dark:border-[#1e1e24] rounded-2xl p-6 space-y-2 hover:border-zinc-300 dark:hover:border-zinc-700/80 transition-all flex flex-col justify-center min-h-[105px]">
-          <div className="text-[10px] font-bold tracking-widest text-zinc-400 dark:text-zinc-500 uppercase font-mono">BUILDING</div>
-          <div className="text-xs sm:text-sm font-medium text-zinc-750 dark:text-zinc-300 truncate">
-            may be Content in future
+          <div>
+            <span className="text-zinc-400 dark:text-zinc-500 font-medium">BUILDING:</span>{" "}
+            <span className="text-zinc-800 dark:text-zinc-200 font-semibold">AI Apps & Mobile Tools</span>
+          </div>
+
+          <span className="hidden sm:inline text-zinc-300 dark:text-zinc-800">•</span>
+
+          <div>
+            <span className="text-zinc-400 dark:text-zinc-500 font-medium">EXPLORING:</span>{" "}
+            <span className="text-zinc-800 dark:text-zinc-200 font-semibold">Agentic AI • RAG • MCP</span>
           </div>
         </div>
+      </motion.div>
 
-        {/* Card 3: Learning */}
-        <div className="bg-white dark:bg-[#070709] border border-zinc-200 dark:border-[#1e1e24] rounded-2xl p-6 space-y-2 hover:border-zinc-300 dark:hover:border-zinc-700/80 transition-all flex flex-col justify-center min-h-[105px]">
-          <div className="text-[10px] font-bold tracking-widest text-zinc-400 dark:text-zinc-500 uppercase font-mono">LEARNING</div>
-          <div className="text-xs sm:text-sm font-medium text-zinc-750 dark:text-zinc-300 truncate">
-            Agentic AI • LLMs • MCP • RAG
-          </div>
-        </div>
-
-      </div>
-
-    </div>
+    </motion.div>
   );
 };
