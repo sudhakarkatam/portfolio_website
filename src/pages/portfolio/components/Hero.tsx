@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { FaGithub, FaLinkedin, FaXTwitter } from "react-icons/fa6";
 import { MdEmail } from "react-icons/md";
 import { motion, Variants } from "framer-motion";
-import { MapPin } from "lucide-react";
+import { MapPin, FileText, Sparkles } from "lucide-react";
 
 interface HeroProps {
   name: string;
@@ -19,15 +19,34 @@ interface HeroProps {
 export const Hero: React.FC<HeroProps> = ({ name, bio, contact }) => {
   const [typedText, setTypedText] = useState("");
   const titles = [
-    "Learning relentlessly.",
+    "Not done. Not over. Just going.",
+    "Exploring AI, hardware, new tech daily.",
     "Curiosity outstared the void.",
-    "Figuring out things.",
-    "Exploring AI, hardware,new tech updates daily."
+    "Learning relentlessly.",
   ];
   const [titleIdx, setTitleIdx] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [timeStr, setTimeStr] = useState("");
 
-  // Typewriter effect matching Keshavv's hero status line
+  // Live IST Clock
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      const formatter = new Intl.DateTimeFormat("en-US", {
+        timeZone: "Asia/Kolkata",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+      setTimeStr(formatter.format(now));
+    };
+
+    updateTime();
+    const timer = setInterval(updateTime, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Typewriter effect
   useEffect(() => {
     const currentTitle = titles[titleIdx];
     let timer: NodeJS.Timeout;
@@ -40,7 +59,7 @@ export const Hero: React.FC<HeroProps> = ({ name, bio, contact }) => {
       } else {
         timer = setTimeout(() => {
           setIsDeleting(true);
-        }, 2000);
+        }, 2500);
       }
     } else {
       if (typedText.length > 0) {
@@ -65,18 +84,18 @@ export const Hero: React.FC<HeroProps> = ({ name, bio, contact }) => {
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.08,
-        delayChildren: 0.1,
+        staggerChildren: 0.1,
+        delayChildren: 0.15,
       },
     },
   };
 
   const itemVariants: Variants = {
-    hidden: { opacity: 0, y: 15 },
+    hidden: { opacity: 0, y: 18 },
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.4, ease: "easeOut" },
+      transition: { duration: 0.5, ease: "easeOut" },
     },
   };
 
@@ -85,103 +104,132 @@ export const Hero: React.FC<HeroProps> = ({ name, bio, contact }) => {
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="space-y-8 pt-16"
+      className="space-y-6 sm:space-y-8 pt-4 sm:pt-16"
     >
 
-      {/* Top Typewriter Status Line */}
-      <motion.div variants={itemVariants} className="h-6 flex items-center">
-        <span className="text-sm font-mono text-zinc-650 dark:text-zinc-400 font-medium border-r-2 border-zinc-400 dark:border-zinc-500 pr-1 animate-pulse">
-          {typedText}
-        </span>
+      {/* ── Cinematic Hero Banner ── */}
+      <motion.div
+        variants={itemVariants}
+        className="relative w-full h-28 sm:h-44 rounded-2xl sm:rounded-3xl overflow-hidden border border-zinc-200 dark:border-zinc-800/60 shadow-lg group"
+      >
+        {/* Banner background image (if provided) or fallback gradient */}
+        <img
+          src="https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?q=80&w=1200&auto=format&fit=crop"
+          alt="Hero Banner"
+          className="absolute inset-0 w-full h-full object-cover opacity-50 dark:opacity-40 group-hover:scale-105 transition-transform duration-700"
+        />
+
+        {/* Gradient overlay for perfect text contrast */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-black/80" />
+        <div
+          className="absolute inset-0 opacity-20"
+          style={{
+            backgroundImage: `radial-gradient(circle at 20% 50%, rgba(99, 102, 241, 0.3) 0%, transparent 50%),
+                              radial-gradient(circle at 80% 20%, rgba(168, 85, 247, 0.2) 0%, transparent 40%)`,
+          }}
+        />
+        {/* Subtle noise texture */}
+        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E")` }} />
+
+        {/* Quote text */}
+        <div className="relative z-10 flex items-center justify-center h-full px-6">
+          <p className="text-lg sm:text-2xl md:text-3xl font-bold text-white/90 italic tracking-wide text-center" style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}>
+            "{typedText}"
+            <span className="inline-block w-0.5 h-5 sm:h-7 bg-white/60 ml-1 animate-pulse align-middle" />
+          </p>
+        </div>
+
+        {/* Bottom fade */}
+        <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[#fafafa] dark:from-[#0a0a0c] to-transparent" />
       </motion.div>
 
-      {/* Upper Hero Section - Directly on Grid */}
-      <motion.div variants={itemVariants} className="space-y-6 py-2">
+      {/* ── Profile Section ── */}
+      <motion.div variants={itemVariants} className="space-y-4 sm:space-y-6 py-1 sm:py-2">
 
-        {/* Profile Avatar & Header Title */}
-        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-8">
-          {/* Completely Round Profile Image */}
+        {/* Profile Avatar & Name */}
+        <div className="flex flex-row items-center sm:items-start gap-4 sm:gap-8">
+          {/* Profile Image with glow ring */}
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: "spring", stiffness: 260, damping: 20 }}
-            className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden shrink-0 border border-zinc-300 dark:border-[#1e1e24] shadow-md"
+            className="relative shrink-0"
           >
-            <img
-              src="/profile pic.png"
-              className="w-full h-full object-cover bg-zinc-100 dark:bg-zinc-900"
-              alt={name}
-            />
+            <div className="w-20 h-20 sm:w-28 sm:h-28 rounded-full overflow-hidden border-2 border-zinc-200 dark:border-zinc-700 shadow-xl ring-2 sm:ring-4 ring-zinc-100 dark:ring-zinc-900/80">
+              <img
+                src="/profile pic.png"
+                className="w-full h-full object-cover bg-zinc-100 dark:bg-zinc-900"
+                alt={name}
+              />
+            </div>
+            {/* Online indicator */}
+            <span className="absolute bottom-0.5 right-0.5 w-3 h-3 sm:w-4 sm:h-4 bg-emerald-500 rounded-full border-2 border-white dark:border-[#0a0a0c] shadow-sm" />
           </motion.div>
 
-          <div className="space-y-2 text-center sm:text-left flex-1">
-            <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-zinc-900 dark:text-white">
-              Sudhakar.
-            </h1>
-            <div className="flex flex-wrap items-center gap-2.5 pt-1 justify-center sm:justify-start">
-              <p className="text-lg sm:text-xl font-semibold text-zinc-700 dark:text-zinc-300">
+          <div className="space-y-2 sm:space-y-3 text-left flex-1 min-w-0">
+            {/* Full Name - Two Line Layout */}
+            <div>
+              <h1 className="text-2xl sm:text-5xl font-extrabold tracking-tight text-zinc-900 dark:text-white leading-[1.1]">
+                Sudhakar
+              </h1>
+              <h1 className="text-2xl sm:text-5xl font-extrabold tracking-tight text-zinc-600 dark:text-zinc-400 leading-[1.1]">
+                Reddy Katam
+              </h1>
+            </div>
+
+            {/* Subtitle with badges */}
+            <div className="flex flex-wrap items-center gap-2 justify-start">
+              <p className="text-sm sm:text-lg font-medium text-zinc-600 dark:text-zinc-400">
                 Engineer with many interests, always curious to explore new technologies
               </p>
-              <span className="inline-flex items-center gap-1.5 text-xs font-mono font-semibold text-zinc-650 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-2.5 py-1 rounded-full shrink-0">
-                <MapPin size={13} className="text-zinc-500 dark:text-zinc-400" />
-                <span>India</span>
-              </span>
             </div>
+
+            {/* Plain text update date and live IST clock */}
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium pt-1">
+              Updated Aug 06, 2026 · {timeStr || "8:44 AM"} in India
+            </p>
           </div>
         </div>
 
         {/* Bio Text */}
-        <p className="text-zinc-650 dark:text-zinc-400 text-base leading-relaxed max-w-3xl">
-          Driven by curiosity. I love learning new technologies and building products that genuinely excite me—from AI experiments to full-stack systems.
+        <p className="text-zinc-600 dark:text-zinc-400 text-sm sm:text-base leading-relaxed max-w-3xl">
+          {bio}
         </p>
 
-        {/* Action Button & Glowing Social Icons Row */}
-        <div className="flex flex-wrap items-center gap-4 pt-2">
-          {/* 'Wanna say hello' pill button */}
-          <button
-            onClick={handleSayHello}
-            className="inline-flex items-center justify-center px-6 py-2.5 rounded-full bg-zinc-950 dark:bg-white text-white dark:text-black text-xs sm:text-sm font-bold hover:bg-zinc-800 dark:hover:bg-zinc-200 hover:scale-105 transition-all shadow-md cursor-pointer outline-none"
-          >
-            Wanna say hello:)
-          </button>
-
-          {/* Social Icon Circles */}
-          <div className="flex items-center gap-2.5">
-            {[
-              { icon: FaGithub, href: contact.github, label: "GitHub" },
-              { icon: FaXTwitter, href: contact.twitter, label: "Twitter" },
-              { icon: FaLinkedin, href: contact.linkedin, label: "LinkedIn" },
-              { icon: MdEmail, href: `mailto:${contact.email}`, label: "Email" }
-            ].map((social, idx) => (
-              social.href && (
-                <a
-                  key={idx}
-                  href={social.href}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="w-10 h-10 rounded-full border border-zinc-300 dark:border-[#1e1e24] bg-zinc-100/80 dark:bg-[#070709] flex items-center justify-center text-zinc-700 dark:text-zinc-300 hover:text-black dark:hover:text-white hover:border-zinc-400 dark:hover:border-zinc-600 hover:scale-110 hover:shadow-[0_0_14px_rgba(255,255,255,0.3)] dark:hover:shadow-[0_0_14px_rgba(255,255,255,0.2)] transition-all duration-300 outline-none"
-                  title={social.label}
-                >
-                  <social.icon size={16} />
-                </a>
-              )
-            ))}
-          </div>
-        </div>
+        {/* ── Social Links (Prose Style) ── */}
+        <p className="text-zinc-600 dark:text-zinc-400 text-sm sm:text-base leading-relaxed pt-1">
+          You can find me on{" "}
+          {contact.twitter && (
+            <a href={contact.twitter} target="_blank" rel="noreferrer" className="font-semibold text-zinc-900 dark:text-white underline decoration-zinc-300 dark:decoration-zinc-700 underline-offset-[3px] hover:decoration-indigo-500 dark:hover:decoration-indigo-400 transition-colors">X</a>
+          )}
+          {contact.github && (
+            <>{", "}<a href={contact.github} target="_blank" rel="noreferrer" className="font-semibold text-zinc-900 dark:text-white underline decoration-zinc-300 dark:decoration-zinc-700 underline-offset-[3px] hover:decoration-indigo-500 dark:hover:decoration-indigo-400 transition-colors">GitHub</a></>
+          )}
+          {contact.linkedin && (
+            <>{", "}<a href={contact.linkedin} target="_blank" rel="noreferrer" className="font-semibold text-zinc-900 dark:text-white underline decoration-zinc-300 dark:decoration-zinc-700 underline-offset-[3px] hover:decoration-indigo-500 dark:hover:decoration-indigo-400 transition-colors">LinkedIn</a></>
+          )}
+          {", or reach me via "}
+          <a href={`mailto:${contact.email}`} className="font-semibold text-zinc-900 dark:text-white underline decoration-zinc-300 dark:decoration-zinc-700 underline-offset-[3px] hover:decoration-indigo-500 dark:hover:decoration-indigo-400 transition-colors">email</a>
+          .
+        </p>
 
       </motion.div>
 
-      {/* Single-Line Monospace Status Ticker */}
-      <motion.div variants={itemVariants} className="pt-2">
-        <div className="flex flex-wrap items-center justify-between gap-y-2 gap-x-4 py-3 border-t border-b border-zinc-200 dark:border-zinc-800/80 font-mono text-xs text-zinc-650 dark:text-zinc-400">
+      {/* ── Status Ticker Bar ── */}
+      <motion.div variants={itemVariants} className="pt-1">
+        <div className="relative flex flex-wrap items-center justify-between gap-y-2 gap-x-4 py-3.5 border-t border-b border-zinc-200 dark:border-zinc-800/80 font-mono text-xs text-zinc-500 dark:text-zinc-400">
+          {/* Subtle gradient overlay on borders */}
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-indigo-500/20 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-indigo-500/20 to-transparent" />
+
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-            <span className="font-bold text-zinc-900 dark:text-white tracking-wider">Open to Freelance Opportunities </span>
+            <span className="font-bold text-zinc-900 dark:text-white tracking-wider">Open to Freelance Opportunities</span>
           </div>
 
           <span className="hidden sm:inline text-zinc-300 dark:text-zinc-800">•</span>
 
-          <div>
+          <div className="flex items-center gap-1.5">
             <span className="text-zinc-400 dark:text-zinc-500 font-medium">BUILDING:</span>{" "}
             <span className="text-zinc-800 dark:text-zinc-200 font-semibold">AI Apps & Mobile Tools</span>
           </div>

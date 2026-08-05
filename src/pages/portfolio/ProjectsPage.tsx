@@ -90,7 +90,7 @@ export const ProjectsPage: React.FC = () => {
       />
 
       {/* Main Column aligned to 780px centered container matching /portfolio */}
-      <main className="relative z-10 mx-auto max-w-[780px] px-4 sm:px-6 pt-28 pb-24 space-y-10">
+      <main className="relative z-10 mx-auto max-w-[780px] px-4 sm:px-6 pt-8 sm:pt-28 pb-28 sm:pb-24 space-y-10">
 
         {/* Minimalist Header */}
         <div className="space-y-3 pt-2">

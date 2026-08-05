@@ -5,7 +5,7 @@ import { Navbar } from "./components/Navbar";
 import { Hero } from "./components/Hero";
 import { AboutSection } from "./components/AboutSection";
 import { WorkSection } from "./components/WorkSection";
-import { SkillsMarquee } from "./components/SkillsMarquee";
+// import { SkillsMarquee } from "./components/SkillsMarquee";
 import { SkillsSection } from "./components/SkillsSection";
 import { Projects } from "./components/Projects";
 import { Contact } from "./components/Contact";
@@ -94,7 +94,7 @@ const PortfolioPage: React.FC = () => {
   // Scroll spy listener
   useEffect(() => {
     const handleScroll = () => {
-      const sections = ["about", "skills", "contact"];
+      const sections = ["about", "work", "skills", "contact"];
       const scrollPos = window.scrollY + 200;
 
       for (const section of sections) {
@@ -141,15 +141,22 @@ const PortfolioPage: React.FC = () => {
           window.scrollTo({ top: 0, behavior: "smooth" });
         }
       }
-    }
+    };
   };
 
   const handleToggleTheme = () => {
     setTheme(prev => (prev === "dark" ? "light" : "dark"));
   };
 
+  const sectionAnimation = {
+    initial: { opacity: 0, y: 24 },
+    whileInView: { opacity: 1, y: 0 },
+    viewport: { once: true, margin: "-60px" },
+    transition: { duration: 0.5, ease: "easeOut" },
+  };
+
   return (
-    <div className="min-h-screen bg-[#fafafa] dark:bg-[#0a0a0c] text-zinc-900 dark:text-[#f4f4f5] font-sans selection:bg-[#eaeaea]/20 relative transition-colors duration-300">
+    <div className="min-h-screen bg-[#fafafa] dark:bg-[#0a0a0c] text-zinc-900 dark:text-[#f4f4f5] font-sans selection:bg-indigo-500/15 dark:selection:bg-indigo-500/20 selection:text-zinc-900 dark:selection:text-white relative transition-colors duration-300">
       
       {/* Subtle Background Grid overlay */}
       <div 
@@ -170,16 +177,7 @@ const PortfolioPage: React.FC = () => {
         }}
       />
 
-      {/* Scroll Marquee animation keyframe styles */}
-      <style>{`
-        @keyframes marquee {
-          0% { transform: translateX(0%); }
-          100% { transform: translateX(-50%); }
-        }
-        .animate-marquee {
-          animation: marquee 30s linear infinite;
-        }
-      `}</style>
+
 
       {/* Capsule Navigation Navbar */}
       <Navbar 
@@ -190,41 +188,30 @@ const PortfolioPage: React.FC = () => {
       />
 
       {/* Main Container aligned to 780px centered column */}
-      <main className="relative z-10 mx-auto max-w-[780px] px-4 sm:px-6 py-12 space-y-16">
+      <main className="relative z-10 mx-auto max-w-[780px] px-4 sm:px-6 pt-6 sm:pt-12 pb-24 sm:pb-12 space-y-14 sm:space-y-20">
         
         {/* Hero Section */}
         <Hero name={name} bio={bio} contact={contact} />
 
-        {/* Section 1: About Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-60px" }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-        >
+
+
+        {/* Section: About */}
+        <motion.div {...sectionAnimation}>
           <AboutSection />
         </motion.div>
 
-        {/* Work Section (Hidden for now) */}
-        {/* <WorkSection /> */}
+        {/* Section: Experience & Work (Hidden for now) */}
+        {/* <motion.div {...sectionAnimation}>
+          <WorkSection />
+        </motion.div> */}
 
-        {/* Section 2: Skills & Technologies Grid */}
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-60px" }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-        >
+        {/* Section: Skills & Technologies */}
+        <motion.div {...sectionAnimation}>
           <SkillsSection />
         </motion.div>
 
-        {/* Section 4: Contact */}
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-60px" }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-        >
+        {/* Section: Contact */}
+        <motion.div {...sectionAnimation}>
           <Contact contact={contact} />
         </motion.div>
 
